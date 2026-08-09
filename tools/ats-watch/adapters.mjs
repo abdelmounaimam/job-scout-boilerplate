@@ -174,18 +174,31 @@ export const ADAPTERS = {
       offset,
       searchText: co.searchText ?? '',
     }),
-    // ⚠️⚠️ WORKDAY RETURNS `total` ONLY ON THE FIRST PAGE. Later pages answer
-    // `total: 0` while serving perfectly valid results. A naive condition
-    // (`seen < d.total`) therefore goes false on page two and pagination stops
-    // at 40 reqs out of 2,000, SILENTLY: a truncated board looks exactly like a
-    // small one. That is why `more` receives the total remembered from the first
-    // page rather than the current page's data.
+    // ⚠️⚠️ WORKDAY NE REND `total` QUE SUR LA PREMIÈRE PAGE. Les suivantes
+    // renvoient `total: 0` tout en servant des résultats parfaitement valides.
+    // Une condition écrite naïvement (`seen < d.total`) devient donc fausse dès
+    // la deuxième page et la pagination s'arrête à 40 reqs sur 2 000, EN SILENCE :
+    // un board plafonné ressemble trait pour trait à un petit board. C'est pour
+    // ça que `more` reçoit le total mémorisé de la première page, et pas `d`.
     total: (d) => d.total ?? 0,
     more: (d, seen, knownTotal) => seen < Math.min(knownTotal, 400),
     parse: (d, co) => (d.jobPostings ?? []).map((j) => ({
-      id: j.bulletFields?.[0] ?? j.externalPath,
+      // ⚠️⚠️ `externalPath` and NOTHING ELSE as the id. A first version used
+      // `bulletFields[0]`, which is NOT an identifier: on some tenants it is the
+      // site name ("Head office - Mobilize"), shared by dozens of reqs. The
+      // consequence is invisible to the eye: those postings all collapse onto one
+      // key in `.seen.json`, so the poller treats as "already seen" a posting it
+      // never showed. A non-unique id does not break the scan, it breaks the
+      // scan's MEMORY, which is worse because it looks like it is working.
+      id: j.externalPath,
       title: j.title ?? '',
-      location: j.locationsText ?? '',
+      // ⚠️ Not every tenant serves `locationsText`. Some omit it entirely and
+      // put the site in `bulletFields`. Without this fallback every posting from
+      // those tenants reads "NO LOCATION", is kept by default, and cannot be
+      // filtered geographically at all.
+      location: j.locationsText
+        ?? (j.bulletFields ?? []).find((b) => typeof b === 'string' && b.length < 60)
+        ?? '',
       url: `https://${co.slug}.${co.host ?? 'wd3'}.myworkdayjobs.com/${co.site}${j.externalPath}`,
       // ⚠️ `postedOn` is a human phrase ("Posted 5 Days Ago"), not a date.
       publishedAt: j.postedOn ?? null,
@@ -297,9 +310,9 @@ export async function fetchBoard(co, { timeout = 20000 } = {}) {
 
   const jobs = [];
   const step = a.pageSize ?? 100;
-  // The total is remembered from whichever page carries it: some ATS report it
-  // only once (see the Workday adapter's note). It is local to this call, so two
-  // boards fetched concurrently never clobber each other's count.
+  // Le total est mémorisé depuis la première page qui le porte : certains ATS ne
+  // le rendent qu'une fois (voir le commentaire de l'adaptateur Workday). Il est
+  // local à l'appel, donc deux boards sondés en parallèle ne se marchent pas dessus.
   let knownTotal = 0;
   for (let offset = 0; ; offset += step) {
     const r = await get(a.url(co, offset), a.post ? a.body(co, offset) : null);

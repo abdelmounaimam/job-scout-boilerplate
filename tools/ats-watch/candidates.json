@@ -1,0 +1,5 @@
+{
+  "_comment": "DISCOVERY POOL: names of companies NOT yet on the watchlist. discover.mjs derives slug variants from them, probes the public APIs, and promotes the ones with a live board and plausible reqs. Add names freely: a name that answers on no API costs a handful of failed requests. Do NOT put agencies, consultancies or body shops here — discover.mjs filters them out anyway, so probing them is pure waste.",
+  "_why": "The daily poller only sees companies it already knows. Discovery is what finds the ones never listed, and it is the only part that genuinely benefits from running weekly. Names come from the bootstrap workflow, the web-search workflow, and by hand.",
+  "names": []
+}

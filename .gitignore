@@ -1,0 +1,22 @@
+# Poller and discovery state: machine-local, regenerated, and noisy in diffs.
+tools/ats-watch/.seen.json
+tools/ats-watch/.tried.json
+
+# Raw scan dumps and cron logs. The digests and analyses ARE committed; these
+# intermediate files are not.
+digests/.*
+digests/cron.log
+
+# Never commit anything carrying a session cookie or an auth token.
+*.har
+.session.json
+*.env
+
+# Compiled resumes are committed, page renders used for the visual check are not.
+profile/cv/**/page-*.png
+profile/cv/**/*.aux
+profile/cv/**/*.log
+profile/cv/**/*.out
+
+node_modules/
+.DS_Store

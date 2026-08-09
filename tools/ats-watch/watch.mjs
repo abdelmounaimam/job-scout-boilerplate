@@ -16,7 +16,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { TITLE, STACK, RULED_OUT, GEO } from '../../profile/profile.mjs';
+import { TITLE, STACK, RULED_OUT, GEO, ROLE_WORDS } from '../../profile/profile.mjs';
 import { makeGeo } from './geo.mjs';
 import { fetchBoard } from './adapters.mjs';
 
@@ -27,8 +27,6 @@ const geo = makeGeo(GEO);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // --- filters -----------------------------------------------------------------
-
-const ROLE_WORDS = /engineer|developer|développeur|entwickler|swe|software|programmer/i;
 
 /** Word-boundary test. ⚠️ A plain `includes` on 'java' fires on 'javascript'
  *  and silently kills every good posting. This bug is easy to reintroduce. */
@@ -66,6 +64,11 @@ const flag = (n) => args.includes(`--${n}`);
 const RESET = flag('reset');
 const ALL = flag('all');
 const QUIET = flag('quiet');
+// ⚠️ Écrire le digest DEPUIS les données, jamais en reparsant la sortie console.
+// Première tentative : une regex sur le texte affiché. Elle a rendu 0 ligne sur
+// 151 reqs, en silence, et un fichier vide ressemble exactement à « rien trouvé ».
+// La sortie lisible est faite pour un humain, pas pour être reparsée.
+const CSV = args.find((a) => a.startsWith('--csv='))?.slice(6);
 
 const list = JSON.parse(readFileSync(join(HERE, 'watchlist.json'), 'utf8'));
 const seen = existsSync(SEEN_FILE) ? JSON.parse(readFileSync(SEEN_FILE, 'utf8')) : {};
@@ -146,6 +149,40 @@ let collapsed = 0;
 for (const j of fresh) {
   const n = perCo.get(j.company) ?? 0;
   if (n < PER_CO) { shown.push(j); perCo.set(j.company, n + 1); } else { collapsed += 1; }
+}
+
+// Digest CSV : mêmes colonnes que les autres digests du pipeline. Les colonnes
+// `verdict` et `why` sont laissées VIDES exprès. Le script produit des faits ;
+// le jugement se fait en session, en lisant le corps de l'annonce, et `why` doit
+// citer la ligne sur laquelle il repose.
+if (CSV) {
+  const cols = ['scan_date', 'verdict', 'why', 'title', 'company', 'location_remote',
+    'years_required', 'junior_opening', 'management_scope', 'salary_shown', 'stack',
+    'stack_gaps', 'level', 'posted_at', 'url'];
+  const esc = (v) => {
+    const s = String(v ?? '');
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  // ⚠️ Date LOCALE, pas `toISOString()`, qui rend de l'UTC. Constaté ici même :
+  // à 00h20 en heure de Paris, le digest se datait de la VEILLE, donc il aurait
+  // écrasé le fichier du jour précédent. Un scan mal daté est pire qu'inutile,
+  // il fait croire qu'une annonce a été vue plus tôt qu'elle ne l'a été.
+  const d = new Date();
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const lines = [cols.join(',')];
+  for (const j of fresh) {
+    lines.push(cols.map((c) => esc({
+      scan_date: today,
+      title: j.title,
+      company: j.company,
+      location_remote: `${j.tag}${j.location ? ` · ${j.location}` : ''}`,
+      salary_shown: j.pay ?? '',
+      posted_at: j.publishedAt ?? '',
+      url: j.url,
+    }[c] ?? '')).join(','));
+  }
+  writeFileSync(CSV, `${lines.join('\n')}\n`);
+  console.log(`\nDigest écrit : ${CSV} (${fresh.length} lignes, colonnes verdict et why laissées vides)`);
 }
 
 console.log(`\n${fresh.length} NEW plausible req(s), out of ${scanned} reqs across ${list.companies.length} boards.`);

@@ -174,7 +174,14 @@ export const ADAPTERS = {
       offset,
       searchText: co.searchText ?? '',
     }),
-    more: (d, seen) => seen < Math.min(d.total ?? 0, 400),
+    // ⚠️⚠️ WORKDAY RETURNS `total` ONLY ON THE FIRST PAGE. Later pages answer
+    // `total: 0` while serving perfectly valid results. A naive condition
+    // (`seen < d.total`) therefore goes false on page two and pagination stops
+    // at 40 reqs out of 2,000, SILENTLY: a truncated board looks exactly like a
+    // small one. That is why `more` receives the total remembered from the first
+    // page rather than the current page's data.
+    total: (d) => d.total ?? 0,
+    more: (d, seen, knownTotal) => seen < Math.min(knownTotal, 400),
     parse: (d, co) => (d.jobPostings ?? []).map((j) => ({
       id: j.bulletFields?.[0] ?? j.externalPath,
       title: j.title ?? '',
@@ -290,12 +297,17 @@ export async function fetchBoard(co, { timeout = 20000 } = {}) {
 
   const jobs = [];
   const step = a.pageSize ?? 100;
+  // The total is remembered from whichever page carries it: some ATS report it
+  // only once (see the Workday adapter's note). It is local to this call, so two
+  // boards fetched concurrently never clobber each other's count.
+  let knownTotal = 0;
   for (let offset = 0; ; offset += step) {
     const r = await get(a.url(co, offset), a.post ? a.body(co, offset) : null);
     if (r.error) return offset === 0 ? { error: r.error } : { jobs };
     const page = a.parse(r.data, co);
     jobs.push(...page);
-    if (!page.length || !a.more(r.data, jobs.length)) break;
+    knownTotal = Math.max(knownTotal, a.total?.(r.data) ?? 0);
+    if (!page.length || !a.more(r.data, jobs.length, knownTotal)) break;
   }
   return { jobs };
 }

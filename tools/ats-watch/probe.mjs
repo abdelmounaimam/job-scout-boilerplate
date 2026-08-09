@@ -49,7 +49,16 @@ const report = (ats, slug, res) => {
   console.log('      ⚠ check these titles look like this company before adding the slug.');
 };
 
-if (positional.length >= 2 && ADAPTERS[positional[0]]) {
+if (positional[0] === 'workday') {
+  // Workday needs the tenant AND the site, both read off the careers URL:
+  //   https://<tenant>.<host>.myworkdayjobs.com/<site>
+  const [, slug, site, host] = positional;
+  if (!slug || !site) {
+    console.log('usage: node probe.mjs workday <tenant> <site> [host, default wd3]');
+    process.exit(1);
+  }
+  report('workday', `${slug}/${site}`, await fetchBoard({ ats: 'workday', slug, site, host }));
+} else if (positional.length >= 2 && ADAPTERS[positional[0]]) {
   const [ats, slug] = positional;
   report(ats, slug, await fetchBoard({ ats, slug }));
 } else {

@@ -147,6 +147,46 @@ export const ADAPTERS = {
     })),
   },
 
+  // Workday. THE ATS of large industrial employers, and the reason this adapter
+  // exists: aerospace, automotive, defence and rail groups are almost all on it,
+  // and none of them appear on the startup-oriented boards above.
+  //
+  // ⚠️ It needs TWO identifiers, not one: the tenant and the SITE name, and the
+  // site name is not derivable from the company name. Read both off the careers
+  // URL, which has the shape:
+  //     https://<tenant>.<host>.myworkdayjobs.com/<site>
+  // and the API sits at /wday/cxs/<tenant>/<site>/jobs. `probe.mjs` therefore
+  // cannot guess a Workday board from a name alone: give it the pair.
+  //
+  // ⚠️ POST, not GET, and it needs a JSON body. A GET returns 405.
+  // ⚠️ `limit` is capped at 20 server-side; asking for more silently returns 20.
+  workday: {
+    // Excluded from the weekly discovery: a slug alone is not enough, so
+    // guessing would burn requests on combinations that cannot work.
+    discover: false,
+    paged: true,
+    post: true,
+    pageSize: 20,
+    url: (co) => `https://${co.slug}.${co.host ?? 'wd3'}.myworkdayjobs.com/wday/cxs/${co.slug}/${co.site}/jobs`,
+    body: (co, offset = 0) => JSON.stringify({
+      appliedFacets: {},
+      limit: 20,
+      offset,
+      searchText: co.searchText ?? '',
+    }),
+    more: (d, seen) => seen < Math.min(d.total ?? 0, 400),
+    parse: (d, co) => (d.jobPostings ?? []).map((j) => ({
+      id: j.bulletFields?.[0] ?? j.externalPath,
+      title: j.title ?? '',
+      location: j.locationsText ?? '',
+      url: `https://${co.slug}.${co.host ?? 'wd3'}.myworkdayjobs.com/${co.site}${j.externalPath}`,
+      // ⚠️ `postedOn` is a human phrase ("Posted 5 Days Ago"), not a date.
+      publishedAt: j.postedOn ?? null,
+      remote: /remote|télétravail/i.test(`${j.title} ${j.locationsText}`),
+      pay: null,
+    })),
+  },
+
   recruitee: {
     url: (co) => `https://${co.slug ?? co}.recruitee.com/api/offers/`,
     parse: (d) => (d.offers ?? []).map((j) => ({
@@ -212,7 +252,7 @@ export async function fetchBoard(co, { timeout = 20000 } = {}) {
   const a = ADAPTERS[co.ats];
   if (!a) throw new Error(`unknown ATS: ${co.ats}`);
 
-  const get = async (url) => {
+  const get = async (url, body = null) => {
     // A 429 is retried. Treating it as "no board" is precisely the mistake that
     // cost the source pipeline three real companies for a week.
     for (let attempt = 0; ; attempt += 1) {
@@ -220,7 +260,15 @@ export async function fetchBoard(co, { timeout = 20000 } = {}) {
       const c = new AbortController();
       const t = setTimeout(() => c.abort(), timeout);
       try {
-        const r = await fetch(url, { signal: c.signal, headers: { 'user-agent': UA } });
+        const init = body === null
+          ? { signal: c.signal, headers: { 'user-agent': UA } }
+          : {
+            method: 'POST',
+            signal: c.signal,
+            body,
+            headers: { 'user-agent': UA, 'content-type': 'application/json', accept: 'application/json' },
+          };
+        const r = await fetch(url, init);
         if (r.status === 429 && attempt < 2) { await sleep(3000 * (attempt + 1)); continue; }
         if (!r.ok) return { error: `HTTP ${r.status}` };
         return { data: a.xml ? await r.text() : await r.json() };
@@ -233,7 +281,7 @@ export async function fetchBoard(co, { timeout = 20000 } = {}) {
   if (!a.paged) {
     const r = await get(a.url(co));
     if (r.error) return { error: r.error };
-    const jobs = a.parse(r.data);
+    const jobs = a.parse(r.data, co);
     if (co.ats === 'personio') {
       for (const j of jobs) j.url = `https://${co.slug ?? co}.jobs.personio.de/job/${j.id}`;
     }
@@ -241,10 +289,11 @@ export async function fetchBoard(co, { timeout = 20000 } = {}) {
   }
 
   const jobs = [];
-  for (let offset = 0; ; offset += 100) {
-    const r = await get(a.url(co, offset));
+  const step = a.pageSize ?? 100;
+  for (let offset = 0; ; offset += step) {
+    const r = await get(a.url(co, offset), a.post ? a.body(co, offset) : null);
     if (r.error) return offset === 0 ? { error: r.error } : { jobs };
-    const page = a.parse(r.data);
+    const page = a.parse(r.data, co);
     jobs.push(...page);
     if (!page.length || !a.more(r.data, jobs.length)) break;
   }

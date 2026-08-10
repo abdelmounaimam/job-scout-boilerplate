@@ -181,21 +181,33 @@ export const ADAPTERS = {
     // un board plafonné ressemble trait pour trait à un petit board. C'est pour
     // ça que `more` reçoit le total mémorisé de la première page, et pas `d`.
     total: (d) => d.total ?? 0,
-    more: (d, seen, knownTotal) => seen < Math.min(knownTotal, 400),
+    // A high cap, deliberately, and it is paid for in scan time.
+    //
+    // ⚠️ At 400 the cap HID in-country postings: one employer publishes 1,159
+    // reqs worldwide and its local roles sit well past the 400th. A capped board
+    // is indistinguishable from a board with nothing local.
+    //
+    // ⚠️ The tempting fix is `searchText: '<country>'`: 1,159 reqs collapse to
+    // 287 and the scan is instant. REJECTED. On another tenant, searching the
+    // country name returned 170 of 245 reqs while searching a specific city
+    // returned 71, and nothing proves the second set sits inside the first. A
+    // server-side text filter that misses a posting misses it SILENTLY. A slower
+    // scan costs far less than a role never seen.
+    more: (d, seen, knownTotal) => seen < Math.min(knownTotal, 2000),
     parse: (d, co) => (d.jobPostings ?? []).map((j) => ({
-      // ⚠️⚠️ `externalPath` and NOTHING ELSE as the id. A first version used
-      // `bulletFields[0]`, which is NOT an identifier: on some tenants it is the
-      // site name ("Head office - Mobilize"), shared by dozens of reqs. The
-      // consequence is invisible to the eye: those postings all collapse onto one
-      // key in `.seen.json`, so the poller treats as "already seen" a posting it
-      // never showed. A non-unique id does not break the scan, it breaks the
-      // scan's MEMORY, which is worse because it looks like it is working.
+      // ⚠️⚠️ `externalPath` et RIEN D'AUTRE comme identifiant. La première version
+      // prenait `bulletFields[0]`, qui n'est PAS un identifiant : chez Renault
+      // c'est le site (« Head office - Mobilize »), partagé par des dizaines de
+      // reqs. Conséquence, invisible à l'œil nu : toutes ces annonces
+      // s'écrasaient dans `.seen.json` sous une même clé, donc le poller
+      // considérait comme « déjà vue » une annonce qu'il n'avait jamais montrée.
+      // Un identifiant non unique ne casse pas le scan, il casse la MÉMOIRE du scan.
       id: j.externalPath,
       title: j.title ?? '',
-      // ⚠️ Not every tenant serves `locationsText`. Some omit it entirely and
-      // put the site in `bulletFields`. Without this fallback every posting from
-      // those tenants reads "NO LOCATION", is kept by default, and cannot be
-      // filtered geographically at all.
+      // ⚠️ Tous les tenants ne servent pas `locationsText`. Renault ne le met
+      // pas du tout : le lieu est dans `bulletFields`. Sans ce repli, toutes ses
+      // annonces ressortaient en « NO LOCATION », donc gardées par défaut et
+      // impossibles à trier géographiquement.
       location: j.locationsText
         ?? (j.bulletFields ?? []).find((b) => typeof b === 'string' && b.length < 60)
         ?? '',

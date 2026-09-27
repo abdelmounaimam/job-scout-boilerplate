@@ -1,78 +1,47 @@
 #!/usr/bin/env node
-// Daily poller over the public ATS boards on the watchlist.
-// Zero dependencies, Node 20+. No authentication: these endpoints are public,
-// so this runs with no browser, no cookie and no account to be traced to.
+// Poller over the public ATS boards of the watchlist. Run by hand, or by
+// tools/daily-scan.sh. Zero dependencies, Node 20+, no authentication: no
+// browser, no cookie, no account to be traced to.
 //
 // ⚠️ SCOPE: it filters on TITLE and LOCATION only. It does not download
 // descriptions (thousands of reqs, absurd) and therefore does NOT replace
 // reading the posting. It answers exactly one question: "has a new, plausible
-// req appeared since last time?" Reading the body stays mandatory.
+// req appeared since last time?" Reading the body stays mandatory before
+// investing, and the body can close what the title opened (one company's
+// three backend reqs all said "8+ years", and came back ★ ACTIONABLE at every
+// run until the company went into profile/ruled-out.mjs).
 //
-//   node watch.mjs           only reqs that are NEW since the last run
-//   node watch.mjs --all     ignore state, show every match
-//   node watch.mjs --reset   mark everything as seen, report nothing
-//   node watch.mjs --quiet   print nothing when there is nothing new
+//   node watch.mjs                only reqs that are NEW since the last run
+//   node watch.mjs --all          ignore state, show every match
+//   node watch.mjs --reset        mark everything as seen, report nothing
+//   node watch.mjs --quiet        print nothing when there is nothing new
+//   node watch.mjs --csv=<file>   also write the new reqs as a digest CSV
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { TITLE, STACK, RULED_OUT, GEO, ROLE_WORDS } from '../../profile/profile.mjs';
-import { makeGeo } from './geo.mjs';
 import { fetchBoard } from './adapters.mjs';
+import { geo, titleVerdict, ruledOut, appliedChecker } from './filters.mjs';
+import { toCsv } from '../lib/text.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SEEN_FILE = join(HERE, '.seen.json');
-const geo = makeGeo(GEO);
-
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-// --- filters -----------------------------------------------------------------
-
-/** Word-boundary test. ⚠️ A plain `includes` on 'java' fires on 'javascript'
- *  and silently kills every good posting. This bug is easy to reintroduce. */
-const hasWord = (haystack, needle) =>
-  new RegExp(`(^|[^a-z0-9+#.])${needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-z0-9+#]|$)`, 'i')
-    .test(haystack);
-
-/** Does the title plausibly describe the role? Cheap filter, never final. */
-function titleLooksRight(title) {
-  const t = title.toLowerCase();
-  if (!ROLE_WORDS.test(t)) return 'not an engineering role';
-  const junior = TITLE.tooJunior.find((x) => t.includes(x));
-  if (junior) return `level (${junior.trim()})`;
-  const fn = TITLE.wrongFunction.find((x) => t.includes(x));
-  if (fn) return `adjacent function (${fn.trim()})`;
-  // Senior titles are DROPPED here, where a body-reading triage would only flag
-  // them. Deliberate: this poller has nothing but the title to go on.
-  const senior = TITLE.tooSenior.find((x) => t.includes(x));
-  if (senior) return `out of band (${senior.trim()})`;
-  const veto = STACK.negativeInTitle.find((x) => hasWord(t, x));
-  if (veto) return `stack in title (${veto.trim()})`;
-  return null;
-}
-
-const ruledOut = (company) => {
-  const n = company.toLowerCase().trim();
-  const hit = Object.keys(RULED_OUT).find((k) => n.includes(k));
-  return hit ? RULED_OUT[hit] : null;
-};
-
-// --- program ------------------------------------------------------------------
 
 const args = process.argv.slice(2);
 const flag = (n) => args.includes(`--${n}`);
 const RESET = flag('reset');
 const ALL = flag('all');
 const QUIET = flag('quiet');
-// ⚠️ Écrire le digest DEPUIS les données, jamais en reparsant la sortie console.
-// Première tentative : une regex sur le texte affiché. Elle a rendu 0 ligne sur
-// 151 reqs, en silence, et un fichier vide ressemble exactement à « rien trouvé ».
-// La sortie lisible est faite pour un humain, pas pour être reparsée.
+// ⚠️ The digest is written FROM THE DATA, never by re-parsing the console
+// output. A first attempt ran a regex over the printed text: 0 rows out of 151
+// reqs, silently, and an empty file looks exactly like "nothing found".
 const CSV = args.find((a) => a.startsWith('--csv='))?.slice(6);
 
 const list = JSON.parse(readFileSync(join(HERE, 'watchlist.json'), 'utf8'));
 const seen = existsSync(SEEN_FILE) ? JSON.parse(readFileSync(SEEN_FILE, 'utf8')) : {};
 const firstRun = Object.keys(seen).length === 0;
+const isApplied = appliedChecker();
 
 const fresh = [];
 const errors = [];
@@ -82,26 +51,31 @@ const drop = (why) => dropTally.set(why, (dropTally.get(why) ?? 0) + 1);
 
 for (const co of list.companies) {
   const res = await fetchBoard(co);
-  if (res.error) { errors.push(`${co.name} (${co.ats}/${co.slug}): ${res.error}`); continue; }
+  if (res.error) {
+    errors.push(`${co.name} (${co.ats}/${co.slug}${co.site ? `/${co.site}` : ''}): ${res.error}`);
+    continue;
+  }
 
   // Composite key: two ATS can serve the same slug for different companies.
-  const key = `${co.ats}:${co.slug}`;
+  // Workday also needs the site, since one tenant can host several boards.
+  const key = `${co.ats}:${co.slug}${co.site ? `:${co.site}` : ''}`;
   const before = new Set(seen[key] ?? []);
   const ids = [];
   const closed = ruledOut(co.name);
+  const applied = isApplied(co);
 
   for (const job of res.jobs) {
     scanned += 1;
     ids.push(job.id);
-    if (!ALL && before.has(job.id)) continue;      // already seen
+    if (!ALL && before.has(job.id)) continue; // already seen
     if (closed) { drop('company ruled out'); continue; }
 
-    const why = titleLooksRight(job.title);
+    const why = titleVerdict(job.title);
     if (why) { drop(why.split(' (')[0]); continue; }
     const place = geo.verdict(job);
     if (!place.keep) { drop('abroad'); continue; }
 
-    fresh.push({ ...job, company: co.name, ats: co.ats, applied: co.applied, note: co.note, tag: place.tag });
+    fresh.push({ ...job, company: co.name, ats: co.ats, applied, note: co.note, tag: place.tag });
   }
   seen[key] = ids;
   await sleep(150);
@@ -112,6 +86,18 @@ writeFileSync(SEEN_FILE, JSON.stringify(seen, null, 1));
 
 // --- output -------------------------------------------------------------------
 
+// ⚠️⚠️ BOARD ERRORS COME FIRST, as an incident block. A board that moved to
+// another ATS does not break the poller, it makes it SILENTLY ONE-EYED on that
+// company. The source pipeline printed the error on one line at the very
+// bottom, after 73 reqs, exactly where nobody reads, and a company went
+// unwatched for weeks. A 404 here means: find the new board (probe.mjs, or the
+// careers link on the company's own site), then fix the watchlist entry.
+if (errors.length) {
+  console.log(`⚠⚠ INCIDENT: ${errors.length} board(s) failed. Each one is a company no longer watched.`);
+  for (const e of errors) console.log(`   ✗ ${e}`);
+  console.log('   → node tools/ats-watch/probe.mjs "<Company>" to find where it moved.\n');
+}
+
 if (RESET) {
   console.log(`State initialised: ${scanned} reqs marked as seen across ${list.companies.length} boards.`);
   process.exit(0);
@@ -120,19 +106,16 @@ if (RESET) {
 if (firstRun && !ALL) {
   console.log(`First run: ${scanned} reqs recorded as the baseline across ${list.companies.length} boards.`);
   console.log('Later runs report only what is new. Use `--all` to see everything now.');
-  if (errors.length) console.log(`\n⚠ ${errors.length} board(s) failed:\n  ${errors.join('\n  ')}`);
   process.exit(0);
 }
 
+const tally = () => [...dropTally].sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${n}`).join(' · ');
+
 if (!fresh.length) {
-  if (!QUIET) {
+  if (!QUIET || errors.length) {
     console.log(`Nothing new. ${scanned} reqs seen across ${list.companies.length} boards.`);
     // ⚠️ Nothing ever disappears silently: always print why things were dropped.
-    if (dropTally.size) {
-      const t = [...dropTally].sort((a, b) => b[1] - a[1]).slice(0, 6);
-      console.log(`  dropped: ${t.map(([k, n]) => `${k} ${n}`).join(' · ')}`);
-    }
-    if (errors.length) console.log(`⚠ ${errors.length} board(s) failed: ${errors.join(' | ')}`);
+    if (dropTally.size) console.log(`  dropped: ${tally()}`);
   }
   process.exit(0);
 }
@@ -151,55 +134,42 @@ for (const j of fresh) {
   if (n < PER_CO) { shown.push(j); perCo.set(j.company, n + 1); } else { collapsed += 1; }
 }
 
-// Digest CSV : mêmes colonnes que les autres digests du pipeline. Les colonnes
-// `verdict` et `why` sont laissées VIDES exprès. Le script produit des faits ;
-// le jugement se fait en session, en lisant le corps de l'annonce, et `why` doit
-// citer la ligne sur laquelle il repose.
 if (CSV) {
-  const cols = ['scan_date', 'verdict', 'why', 'title', 'company', 'location_remote',
-    'years_required', 'junior_opening', 'management_scope', 'salary_shown', 'stack',
-    'stack_gaps', 'level', 'posted_at', 'url'];
-  const esc = (v) => {
-    const s = String(v ?? '');
-    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-  };
-  // ⚠️ Date LOCALE, pas `toISOString()`, qui rend de l'UTC. Constaté ici même :
-  // à 00h20 en heure de Paris, le digest se datait de la VEILLE, donc il aurait
-  // écrasé le fichier du jour précédent. Un scan mal daté est pire qu'inutile,
-  // il fait croire qu'une annonce a été vue plus tôt qu'elle ne l'a été.
+  // Same columns as every other digest of the pipeline. `verdict` and `why`
+  // are left EMPTY on purpose: the script produces facts, the judgement is made
+  // in session while reading the body, and `why` quotes the line it rests on.
+  const cols = ['date_scan', 'verdict', 'why', 'title', 'company', 'location_remote',
+    'years_required', 'junior_open', 'mgmt_scope', 'salary_shown', 'stack',
+    'stack_negative', 'level', 'applicants', 'easy_apply', 'posted_on', 'link'];
+  // ⚠️ LOCAL date, not toISOString(), which is UTC: at 00:20 local time the
+  // digest dated itself from the day before and would have overwritten it.
   const d = new Date();
   const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  const lines = [cols.join(',')];
-  for (const j of fresh) {
-    lines.push(cols.map((c) => esc({
-      scan_date: today,
-      title: j.title,
-      company: j.company,
-      location_remote: `${j.tag}${j.location ? ` · ${j.location}` : ''}`,
-      salary_shown: j.pay ?? '',
-      posted_at: j.publishedAt ?? '',
-      url: j.url,
-    }[c] ?? '')).join(','));
-  }
-  writeFileSync(CSV, `${lines.join('\n')}\n`);
-  console.log(`\nDigest écrit : ${CSV} (${fresh.length} lignes, colonnes verdict et why laissées vides)`);
+  const rows = fresh.filter((j) => !j.applied).map((j) => ({
+    date_scan: today,
+    title: j.title,
+    company: j.company,
+    location_remote: `${j.tag}${j.location ? ` · ${j.location}` : ''}`,
+    salary_shown: j.pay ?? '',
+    easy_apply: `no (${j.ats})`,
+    posted_on: j.publishedAt ?? '',
+    link: j.url,
+  }));
+  writeFileSync(CSV, `${toCsv(rows, cols)}\n`);
+  console.log(`Digest written: ${CSV} (${rows.length} rows, verdict and why left empty)\n`);
 }
 
-console.log(`\n${fresh.length} NEW plausible req(s), out of ${scanned} reqs across ${list.companies.length} boards.`);
+console.log(`${fresh.length} NEW plausible req(s), out of ${scanned} reqs across ${list.companies.length} boards.`);
 if (collapsed) {
   const over = [...perCo].filter(([, n]) => n >= PER_CO).map(([c]) => c);
   console.log(`Capped at ${PER_CO} per company: ${collapsed} req(s) hidden for ${over.join(', ')}.`);
 }
-if (dropTally.size) {
-  const t = [...dropTally].sort((a, b) => b[1] - a[1]).slice(0, 6);
-  console.log(`Dropped this run: ${t.map(([k, n]) => `${k} ${n}`).join(' · ')}`);
-}
+if (dropTally.size) console.log(`Dropped this run: ${tally()}`);
 console.log('');
 for (const j of shown) {
   const mark = j.applied ? '· (already applied here, FYI only)' : '★ ACTIONABLE';
   console.log(`${mark}  ${j.company} — ${j.title}`);
-  // Truncated: some boards list thirty countries in one location string, which
-  // pushes everything else off the screen.
+  // Truncated: some boards list thirty countries in one location string.
   const where = (j.location || '?').length > 90 ? `${j.location.slice(0, 90)}…` : (j.location || '?');
   console.log(`    ${j.tag} · ${where}${j.pay ? ` · ${j.pay}` : ''}`);
   if (j.note) console.log(`    note: ${j.note}`);
@@ -207,4 +177,3 @@ for (const j of shown) {
 }
 console.log('\n⚠ Title and location only. Read the BODY of every posting before investing:');
 console.log('  minimum qualifications, real stack, salary band. Remote flags are wrong in both directions.');
-if (errors.length) console.log(`\n⚠ ${errors.length} board(s) failed: ${errors.join(' | ')}`);

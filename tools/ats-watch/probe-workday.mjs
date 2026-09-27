@@ -1,40 +1,41 @@
 #!/usr/bin/env node
-// Sondeur Workday. Il existe séparément de discover.mjs pour une raison simple :
-// Workday demande DEUX identifiants, le tenant et le site, et le site ne se
-// déduit pas du nom de la boîte. discover.mjs, qui ne dérive que des slugs, ne
-// peut donc pas le trouver. Ici on croise une liste de tenants avec une liste de
-// sites plausibles.
+// Workday prober. It lives apart from discover.mjs for one reason: Workday
+// needs TWO identifiers, the tenant and the site, and the site cannot be
+// derived from the company name. discover.mjs, which only derives slugs, can
+// therefore never find it. This crosses a list of tenants with a list of
+// plausible site names.
 //
-// C'est important pour un profil d'ingénierie industrielle : l'aéronautique,
-// l'automobile, la défense et le ferroviaire sont massivement sur Workday, et
-// ces employeurs n'apparaissent sur AUCUN des boards orientés start-up.
+// It matters for industrial profiles above all: aerospace, automotive, defence
+// and rail groups are massively on Workday, and those employers appear on NONE
+// of the startup-oriented boards.
 //
-//   node probe-workday.mjs                     sonde la liste intégrée
-//   node probe-workday.mjs --promote           ajoute les trouvailles à watchlist.json
-//   node probe-workday.mjs renault stellantis  ne sonde que ces tenants
+//   node probe-workday.mjs                     probe the built-in list
+//   node probe-workday.mjs --promote           add the findings to watchlist.json
+//   node probe-workday.mjs acme globex         probe these tenants only
 //
-// ⚠️ Débit volontairement bas. Un sondage en masse qui rend zéro doit être
-// re-mesuré au ralenti avant d'être écrit comme un fait : un throttling avalé
-// ressemble trait pour trait à une absence de board.
+// ⚠️ Rate deliberately low. A mass probe that returns zero must be re-measured
+// slowly before it is written down as a fact: swallowed throttling looks
+// exactly like an absent board.
+// ⚠️ The fastest route is still reading the careers URL itself:
+//   node probe.mjs --careers <careers page>   gives tenant, host and site at once.
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fetchBoard } from './adapters.mjs';
+import { appliedChecker } from './filters.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const WATCHLIST = join(HERE, 'watchlist.json');
 
-// Tenants plausibles. Le tenant est la partie avant `.wdN.myworkdayjobs.com`.
-// ⚠️ À REMPLIR pour le marché du candidat. Vide par défaut, parce qu'une liste
-// de tenants est propre à un secteur : l'aéronautique française n'a rien à voir
-// avec la santé américaine. Le tenant est la partie avant `.wdN.myworkdayjobs.com`
-// dans l'URL carrières de l'employeur.
+// Plausible tenants: the part before `.wdN.myworkdayjobs.com` in the employer's
+// careers URL. ⚠️ FILL for the candidate's market. Empty by default, because a
+// tenant list is sector specific.
 const TENANTS = [
   // 'acme', 'globex',
 ];
 
-// Noms de site rencontrés en pratique. La casse compte.
+// Site names met in practice. Case matters.
 const SITES = [
   'Careers', 'External', 'careers', 'External_Careers', 'ExternalCareers',
   'ExternalCareerSite', 'Global_Careers', 'GlobalCareers', 'Jobs', 'jobs',
@@ -48,50 +49,59 @@ const PROMOTE = args.includes('--promote');
 const only = args.filter((a) => !a.startsWith('--'));
 const tenants = only.length ? only : TENANTS;
 
+if (!tenants.length) {
+  console.log('No tenant to probe. Fill TENANTS in this file, or pass tenants as arguments.');
+  process.exit(0);
+}
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const trouves = [];
-let sondes = 0;
+const found = [];
+let probes = 0;
 
 for (const slug of tenants) {
-  let touche = null;
+  let hit = null;
   for (const host of HOSTS) {
     for (const site of SITES) {
-      sondes += 1;
+      probes += 1;
       const res = await fetchBoard({ ats: 'workday', slug, site, host }, { timeout: 10000 });
-      if (!res.error && res.jobs?.length) { touche = { slug, site, host, jobs: res.jobs }; break; }
+      if (!res.error && res.jobs?.length) { hit = { slug, site, host, jobs: res.jobs }; break; }
       await sleep(60);
     }
-    if (touche) break;
+    if (hit) break;
   }
-  if (touche) {
-    trouves.push(touche);
-    console.log(`★ ${touche.slug} / ${touche.site} [${touche.host}] — ${touche.jobs.length} req(s)`);
-    for (const j of touche.jobs.slice(0, 3)) {
+  if (hit) {
+    found.push(hit);
+    console.log(`★ ${hit.slug} / ${hit.site} [${hit.host}] — ${hit.jobs.length} req(s)`);
+    for (const j of hit.jobs.slice(0, 3)) {
       console.log(`    ${j.title.slice(0, 62)}  ·  ${(j.location || '?').slice(0, 40)}`);
     }
-    console.log('    ⚠ vérifier que ces intitulés correspondent bien à cette boîte');
+    console.log('    ⚠ check these titles belong to this company');
   }
 }
 
-console.log(`\n${trouves.length} board(s) Workday trouvé(s) sur ${tenants.length} tenants (${sondes} sondes).`);
+console.log(`\n${found.length} Workday board(s) found across ${tenants.length} tenants (${probes} probes).`);
 
-if (PROMOTE && trouves.length) {
+if (PROMOTE && found.length) {
   const wl = JSON.parse(readFileSync(WATCHLIST, 'utf8'));
-  const connus = new Set(wl.companies.map((c) => `${c.ats}:${c.slug}:${c.site ?? ''}`));
-  let ajoutes = 0;
+  const known = new Set(wl.companies.map((c) => `${c.ats}:${c.slug}:${c.site ?? ''}`));
+  const isApplied = appliedChecker();
+  let added = 0;
   const today = process.env.TODAY ?? new Date().toISOString().slice(0, 10);
-  for (const t of trouves) {
-    if (connus.has(`workday:${t.slug}:${t.site}`)) continue;
+  for (const t of found) {
+    if (known.has(`workday:${t.slug}:${t.site}`)) continue;
+    const applied = isApplied({ name: t.slug });
     wl.companies.push({
       name: t.slug, ats: 'workday', slug: t.slug, site: t.site,
       ...(t.host !== 'wd3' ? { host: t.host } : {}),
-      applied: false, note: `Workday trouvé le ${today}, ${t.jobs.length} reqs au sondage`,
+      ...(applied ? { applied: true } : {}),
+      note: `Workday found ${today}, ${t.jobs.length} reqs at probe time`,
     });
-    ajoutes += 1;
+    added += 1;
   }
   writeFileSync(WATCHLIST, `${JSON.stringify(wl, null, 2)}\n`);
-  console.log(`✓ ${ajoutes} board(s) ajouté(s) à watchlist.json.`);
-  console.log('  ⚠ Le champ `name` reprend le tenant : le remplacer par le vrai nom de la boîte.');
-} else if (trouves.length) {
-  console.log('(lecture seule — relancer avec --promote pour les ajouter)');
+  console.log(`✓ ${added} board(s) added to watchlist.json.`);
+  console.log('  ⚠ The `name` field holds the tenant: replace it with the real company name,');
+  console.log('    otherwise the tracker cross-check (one application per company) cannot match it.');
+} else if (found.length) {
+  console.log('(read-only — re-run with --promote to add them)');
 }

@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+/* Tokens taken from the validated palette of the dataviz skill.
+   Dark mode is CHOSEN, not an automatic inversion: the same hues re-dosed for
+   the dark surface. Both scopes are declared, the media query for the system
+   setting and [data-theme] for the toggle button, which must win both ways. */
+@theme {
+  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+:root {
+  color-scheme: light;
+  --canvas: #f9f9f7;
+  --surface: #fcfcfb;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --ink-muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgb(11 11 11 / 0.1);
+
+  --series-1: #2a78d6;
+  --ordinal-1: #86b6ef;
+  --ordinal-2: #5598e7;
+  --ordinal-3: #2a78d6;
+  --ordinal-4: #1c5cab;
+
+  /* Status palette: reserved, never reused for a data series. */
+  --st-good: #0ca30c;
+  --st-attention: #fab219;
+  --st-serious: #ec835a;
+  --st-critical: #d03b3b;
+  --st-pending: #2a78d6;
+  /* Status without judgement: withdrawn by choice. A grey, on purpose, so it
+     reads neither as a success nor as a failure. */
+  --st-neutral: #767570;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --canvas: #0d0d0d;
+    --surface: #1a1a19;
+    --ink: #ffffff;
+    --ink-2: #c3c2b7;
+    --ink-muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgb(255 255 255 / 0.1);
+    --series-1: #3987e5;
+    --ordinal-1: #184f95;
+    --ordinal-2: #256abf;
+    --ordinal-3: #3987e5;
+    --ordinal-4: #6da7ec;
+    --st-pending: #3987e5;
+    --st-neutral: #8e8d86;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #0d0d0d;
+  --surface: #1a1a19;
+  --ink: #ffffff;
+  --ink-2: #c3c2b7;
+  --ink-muted: #898781;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --border: rgb(255 255 255 / 0.1);
+  --series-1: #3987e5;
+  --ordinal-1: #184f95;
+  --ordinal-2: #256abf;
+  --ordinal-3: #3987e5;
+  --ordinal-4: #6da7ec;
+  --st-pending: #3987e5;
+  --st-neutral: #8e8d86;
+}
+
+body {
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Number columns align; large isolated numbers keep proportional figures. */
+.tabular { font-variant-numeric: tabular-nums; }

@@ -1,0 +1,27 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/tools/setup/check.mjs\"",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(node tools/setup/check.mjs:*)",
+      "Bash(node tools/setup/validate.mjs:*)",
+      "Bash(node tools/ats-watch/probe.mjs:*)",
+      "Bash(node tools/ats-watch/watch.mjs:*)",
+      "Bash(node tools/csv-table.mjs:*)",
+      "Bash(node tools/linkedin/linkedin.mjs doctor:*)",
+      "Bash(node tools/linkedin/linkedin.mjs retriage:*)"
+    ]
+  }
+}

@@ -1,0 +1,41 @@
+% Cover letter template. Same font and margins as cv.tex, so a merged PDF
+% (resume + letter) stays consistent.
+% Built by ../../tools/build-letter.sh, never compiled by hand: the tokens in
+% the body of this file are substituted at assembly time, and the header fields
+% come from CANDIDATE in ../profile.mjs.
+% ⚠️ NEVER write a token's name in a comment of this file. Substitution is a
+% global replace: a token quoted here receives the text too, which then lands
+% in the preamble and breaks the build.
+% ⚠️ No babel language package: a language that is not installed ("Unknown
+% option") breaks the preamble, and a broken preamble produces a BLANK FIRST
+% PAGE ahead of the letter instead of an error. XeLaTeX with fontspec renders
+% accents and quotes correctly without babel.
+\documentclass[10pt, a4paper]{article}
+\usepackage[top=2cm, bottom=2cm, left=2cm, right=2cm]{geometry}
+\usepackage{fontspec}
+\IfFontExistsTF{EB Garamond}{\setmainfont{EB Garamond}}{\setmainfont{Latin Modern Roman}}
+\usepackage{parskip}
+\usepackage[hidelinks]{hyperref}
+\pagestyle{empty}
+\setlength{\emergencystretch}{2em}
+
+\begin{document}
+
+{\Large\bfseries @@NAME@@}\\[2pt]
+@@PLACE@@ \quad\textbullet\quad @@PHONE@@ \quad\textbullet\quad @@EMAIL@@\\
+\href{@@LINKEDIN_URL@@}{@@LINKEDIN@@} \quad\textbullet\quad
+\href{@@GITHUB_URL@@}{@@GITHUB@@} \quad\textbullet\quad
+\href{@@PORTFOLIO_URL@@}{@@PORTFOLIO@@}
+
+\vspace{6pt}\hrule\vspace{14pt}
+
+\hfill @@DATE@@
+
+\vspace{10pt}
+\textbf{@@LABEL@@ @@SUBJECT@@}
+
+\vspace{12pt}
+
+@@BODY@@
+
+\end{document}

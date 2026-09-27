@@ -1,4 +1,5 @@
-// Location reasoning, shared by the poller and the discovery pass.
+// Location reasoning, shared by the ATS poller, the discovery pass, the probe
+// and the LinkedIn triage. Built from the GEO block of profile/profile.mjs.
 //
 // The whole problem in one sentence: a location field that says "Remote" does
 // not mean "employable where the candidate lives", and a location field can be

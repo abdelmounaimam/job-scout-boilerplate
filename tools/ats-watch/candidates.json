@@ -1,5 +1,5 @@
 {
-  "_comment": "DISCOVERY POOL: names of companies NOT yet on the watchlist. discover.mjs derives slug variants from them, probes the public APIs, and promotes the ones with a live board and plausible reqs. Add names freely: a name that answers on no API costs a handful of failed requests. Do NOT put agencies, consultancies or body shops here — discover.mjs filters them out anyway, so probing them is pure waste.",
-  "_why": "The daily poller only sees companies it already knows. Discovery is what finds the ones never listed, and it is the only part that genuinely benefits from running weekly. Names come from the bootstrap workflow, the web-search workflow, and by hand.",
+  "_comment": "DISCOVERY POOL: names of companies NOT yet on the watchlist. discover.mjs derives slug variants from them, probes the public ATS APIs, and promotes the ones with a live board and plausible reqs. Add names freely: a name that answers on no API costs a handful of failed requests. Do NOT put agencies, consultancies or body shops here: discover.mjs skips names matching INTERMEDIARY.names anyway, so probing them is pure waste.",
+  "_why": "The poller only sees companies it already knows. Discovery finds the ones never listed, and it is cumulative: every promoted board stays watched, every failed slug is memoised in .tried.json. Names come from the init interview, the bootstrap workflow, the web-search workflow (it PROPOSES names, it never writes them here), and by hand.",
   "names": []
 }

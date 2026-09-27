@@ -406,7 +406,7 @@ export const RULES = {
   neverDiscloseCurrentSalary: true,
   // Write a cover letter on postings in these languages (a French posting
   // refused in 7 hours with the letter field empty).
-  coverLetterLanguages: ['fr', 'de'],
+  coverLetterLanguages: ['de'],
   // Every outbound message (mail, reply, chat, form free-text sent by mail) is
   // shown to the candidate as final text and waits for an explicit "send".
   outboundNeedsApproval: true,

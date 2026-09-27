@@ -1,0 +1,6 @@
+node_modules
+dist
+*.tsbuildinfo
+# Generated from applications/applications.csv at every build: never committed,
+# which is exactly why a commit of the CSV changes nothing online (see README).
+src/data/applications.json

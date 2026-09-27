@@ -4,9 +4,16 @@
 // Each adapter normalises to:
 //   { id, title, location, url, publishedAt, remote, pay, body? }
 //
-// No authentication anywhere: these endpoints are public JSON. No browser, no
-// cookie, nothing that can be tied back to an account. That is the single
-// reason this pipeline can run unattended in cron.
+// No authentication anywhere: these endpoints are public JSON (Personio: XML).
+// No browser, no cookie, nothing that can be tied back to an account, which is
+// why this half of the collection runs without anyone watching.
+//
+// ⚠️ An ATS board can MOVE. A company that leaves Greenhouse for Ashby turns
+// its old slug into a 404, and the poller does not break: it goes silently
+// one-eyed on that company. watch.mjs prints board errors FIRST for that reason.
+// ⚠️ An ATS API can also OUTLIVE its board: a Lever API kept serving 23 reqs
+// for weeks after the hosted page returned 404 and the company had moved to
+// Workable. The hosted page is the test, not the API (probe.mjs checks both).
 //
 // Adding an ATS is a one-file change. Do it here, never in a caller.
 
@@ -174,12 +181,11 @@ export const ADAPTERS = {
       offset,
       searchText: co.searchText ?? '',
     }),
-    // ⚠️⚠️ WORKDAY NE REND `total` QUE SUR LA PREMIÈRE PAGE. Les suivantes
-    // renvoient `total: 0` tout en servant des résultats parfaitement valides.
-    // Une condition écrite naïvement (`seen < d.total`) devient donc fausse dès
-    // la deuxième page et la pagination s'arrête à 40 reqs sur 2 000, EN SILENCE :
-    // un board plafonné ressemble trait pour trait à un petit board. C'est pour
-    // ça que `more` reçoit le total mémorisé de la première page, et pas `d`.
+    // ⚠️⚠️ WORKDAY RETURNS `total` ON THE FIRST PAGE ONLY. Later pages answer
+    // `total: 0` while serving perfectly valid results. A naive condition
+    // (`seen < d.total`) turns false on page two and pagination stopped at 40
+    // reqs out of 2 000, SILENTLY: a capped board looks exactly like a small
+    // one. That is why `more` receives the total remembered from page one.
     total: (d) => d.total ?? 0,
     // A high cap, deliberately, and it is paid for in scan time.
     //
@@ -195,19 +201,17 @@ export const ADAPTERS = {
     // scan costs far less than a role never seen.
     more: (d, seen, knownTotal) => seen < Math.min(knownTotal, 2000),
     parse: (d, co) => (d.jobPostings ?? []).map((j) => ({
-      // ⚠️⚠️ `externalPath` et RIEN D'AUTRE comme identifiant. La première version
-      // prenait `bulletFields[0]`, qui n'est PAS un identifiant : chez Renault
-      // c'est le site (« Head office - Mobilize »), partagé par des dizaines de
-      // reqs. Conséquence, invisible à l'œil nu : toutes ces annonces
-      // s'écrasaient dans `.seen.json` sous une même clé, donc le poller
-      // considérait comme « déjà vue » une annonce qu'il n'avait jamais montrée.
-      // Un identifiant non unique ne casse pas le scan, il casse la MÉMOIRE du scan.
+      // ⚠️⚠️ `externalPath` and NOTHING ELSE as the identifier. A first version
+      // used `bulletFields[0]`, which is NOT an identifier: on one tenant it is
+      // the site name, shared by dozens of reqs. Invisible to the eye: all those
+      // postings collapsed under one key in `.seen.json`, so the poller treated
+      // as "already seen" postings it had never shown. A non-unique id does not
+      // break the scan, it breaks the scan's MEMORY.
       id: j.externalPath,
       title: j.title ?? '',
-      // ⚠️ Tous les tenants ne servent pas `locationsText`. Renault ne le met
-      // pas du tout : le lieu est dans `bulletFields`. Sans ce repli, toutes ses
-      // annonces ressortaient en « NO LOCATION », donc gardées par défaut et
-      // impossibles à trier géographiquement.
+      // ⚠️ Not every tenant serves `locationsText`. Some put the place in
+      // `bulletFields` only. Without this fallback all their postings came out
+      // as "NO LOCATION", kept by default and impossible to sort by geography.
       location: j.locationsText
         ?? (j.bulletFields ?? []).find((b) => typeof b === 'string' && b.length < 60)
         ?? '',
@@ -219,6 +223,11 @@ export const ADAPTERS = {
     })),
   },
 
+  // ⚠️ Recruitee also serves each offer's FORM QUESTIONS for free:
+  // <slug>.recruitee.com/api/offers/<offer-slug> returns `open_questions`,
+  // `options_cv` and `options_cover_letter`. That is where the employment
+  // vehicle hides ("Full-time Employee (X residents only)" vs "Contractor"):
+  // read it before investing in any multi-country remote offer.
   recruitee: {
     url: (co) => `https://${co.slug ?? co}.recruitee.com/api/offers/`,
     parse: (d) => (d.offers ?? []).map((j) => ({
@@ -322,9 +331,9 @@ export async function fetchBoard(co, { timeout = 20000 } = {}) {
 
   const jobs = [];
   const step = a.pageSize ?? 100;
-  // Le total est mémorisé depuis la première page qui le porte : certains ATS ne
-  // le rendent qu'une fois (voir le commentaire de l'adaptateur Workday). Il est
-  // local à l'appel, donc deux boards sondés en parallèle ne se marchent pas dessus.
+  // The total is remembered from the first page that carries it: some ATS
+  // send it only once (see the Workday adapter). It is local to the call, so
+  // two boards probed in parallel do not trample each other.
   let knownTotal = 0;
   for (let offset = 0; ; offset += step) {
     const r = await get(a.url(co, offset), a.post ? a.body(co, offset) : null);

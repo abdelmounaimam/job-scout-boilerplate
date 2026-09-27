@@ -1,12 +1,12 @@
 {
-  "_comment": "ATS watchlist, polled daily by watch.mjs. EVERY slug here must have been VERIFIED by querying the API (node probe.mjs \"Company Name\"). Never guess a slug: a wrong one is indistinguishable from a company with no openings. `applied: true` means an application already went out, so the one-application-per-company rule applies and new reqs there are reported for information only.",
-  "_known_collisions": {
-    "_note": "Slugs that answer but belong to a DIFFERENT company than the name suggests. Listed here so discovery never re-adds them.",
-    "neon": "the Ashby board under this slug is a games payments platform, not Neon Postgres",
-    "prisma": "the Greenhouse board under this slug is an Argentinian fintech, not prisma.io"
+  "_comment": "ATS watchlist, polled by watch.mjs. EVERY entry must have been VERIFIED against the API and its hosted page (node probe.mjs \"Company Name\"). Never guess a slug: a wrong one is indistinguishable from a company with no openings. Entry shape: {\"name\": \"Acme\", \"ats\": \"ashby|greenhouse|lever|smartrecruiters|teamtailor|workable|recruitee|personio|workday\", \"slug\": \"acme\", \"domain\": \"careers.acme.com (Teamtailor custom domain only)\", \"site\": \"External (Workday only)\", \"host\": \"wd3 (Workday only)\", \"note\": \"why it is watched\"}. `name` must be the REAL company name, spelled as in the tracker: the poller cross-checks applications/applications.csv at runtime to enforce one application per company. `applied: true` is only for applications that predate the tracker. SmartRecruiters slugs are CASE SENSITIVE.",
+  "_collisions_do_not_add": {
+    "_note": "Slugs that answer but belong to a DIFFERENT company than the name suggests, or boards that are dead although their API still answers. Key = slug or ats/slug. Discovery never re-adds them.",
+    "ashby/neon": "a games payments platform, not Neon Postgres",
+    "greenhouse/prisma": "an Argentinian fintech, not prisma.io"
   },
-  "_no_public_api": {
-    "_note": "Targets with no queryable board: Avature, SuccessFactors, Taleo, bespoke career sites. They stay manual, with a cadence and a trigger, in the skill's phase 1c table."
+  "_no_api_check_by_hand": {
+    "_note": "Targets with no queryable board (Avature, SuccessFactors, Taleo, iCIMS, bespoke career sites, mail only). They stay manual, each with a cadence and a TRIGGER written as an observable event (\"first full-time software req in <city>\"), not as a vague wish."
   },
   "companies": []
 }

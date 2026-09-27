@@ -2,21 +2,36 @@
 tools/ats-watch/.seen.json
 tools/ats-watch/.tried.json
 
-# Raw scan dumps and cron logs. The digests and analyses ARE committed; these
-# intermediate files are not.
+# Raw scan dumps, doctor and scan logs, partial writes, LLM reports. The
+# digests (YYYY-MM-DD*.csv) and their analyses ARE committed; these
+# intermediate dot-files are not. The dumps stay on disk for `retriage`.
 digests/.*
-digests/cron.log
+!digests/.gitkeep
+*.partiel
 
 # Never commit anything carrying a session cookie or an auth token.
 *.har
 .session.json
-*.env
+**/.session.json
+.env
+.env.*
+!.env.example
 
-# Compiled resumes are committed, page renders used for the visual check are not.
-profile/cv/**/page-*.png
-profile/cv/**/*.aux
-profile/cv/**/*.log
-profile/cv/**/*.out
+# The upload copy of the resume: an artifact rewritten at every application.
+profile/cv/send/
 
+# LaTeX build noise and the page renders of the visual check.
+*.aux
+*.log
+*.out
+*.synctex.gz
+page-*.png
+
+# Node and the dashboard build. The dashboard's data file is rebuilt from
+# applications/applications.csv at build time.
 node_modules/
+dist/
+*.tsbuildinfo
+dashboard/src/data/applications.json
+
 .DS_Store

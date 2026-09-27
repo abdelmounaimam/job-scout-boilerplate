@@ -45,13 +45,13 @@ export const normCompany = (s) =>
  * Do two names designate the same company?
  *
  * ⚠️⚠️ NEITHER strict equality NOR substring: both have bitten.
- * - SUBSTRING makes false positives: "alan" is inside "palantir", "dust" inside
- *   "zedindustries". A cross-check announced 5 fixes, 2 of them imaginary.
- * - STRICT EQUALITY makes false negatives: the tracker says "Polène", LinkedIn
- *   says "Polène Paris", so a company that had already rejected the candidate
+ * - SUBSTRING makes false positives: "nova" is inside "casanova", "ark" inside
+ *   "parkside". A cross-check announced 5 fixes, 2 of them imaginary.
+ * - STRICT EQUALITY makes false negatives: the tracker says "Maison Exemple",
+ *   LinkedIn says "Maison Exemple Paris", so a company already in the tracker
  *   came back as new.
  * The rule that holds both: one name must be a leading run of WORDS of the
- * other. "polene" ⊂ "polene paris" ✔ · "alan" vs "palantir" ✘.
+ * other. "maison exemple" ⊂ "maison exemple paris" ✔ · "nova" vs "casanova" ✘.
  */
 export function sameCompany(a, b) {
   const x = normCompany(a);

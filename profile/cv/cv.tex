@@ -1,0 +1,155 @@
+% Resume template (English base). Content derives from ../experiences.md, the canon.
+% One base resume per posting language (RESUME.byLanguage in ../profile.mjs):
+% copy this file to cv-<lang>.tex for another language and keep the two in sync.
+% Any content change goes into EVERY language version, or they diverge.
+%
+% Compile:  xelatex cv.tex   (twice)
+% Then the VISUAL CHECK, mandatory before sending anything:
+%   pdftoppm -png -r 80 cv.pdf page   → look at every page-*.png, then delete them
+% What to look for: no experience entry with its bullets split across a page
+% break (a title alone at the bottom of a page, orphan bullets at the top of the
+% next). The environments below protect against it, but any added content can
+% recreate the problem: the visual check is the guarantee, not the code.
+\documentclass[10pt, a4paper]{article}
+
+\usepackage[ignoreheadfoot, top=0.8cm, bottom=0.8cm, left=2cm, right=2cm, footskip=1.0cm]{geometry}
+\usepackage{titlesec}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage[dvipsnames]{xcolor}
+\definecolor{primaryColor}{RGB}{0, 0, 0}
+\usepackage{enumitem}
+\usepackage[
+    pdftitle={Example Candidate, Resume},
+    pdfauthor={Example Candidate},
+    colorlinks=true,
+    urlcolor=primaryColor
+]{hyperref}
+\usepackage{bookmark}
+\usepackage{changepage}
+\usepackage{paracol}
+\usepackage{needspace}
+\usepackage{fontspec}
+% EB Garamond when installed (free, Google Fonts), Latin Modern otherwise.
+\IfFontExistsTF{EB Garamond}{\setmainfont{EB Garamond}}{\setmainfont{Latin Modern Roman}}
+
+\raggedright
+\AtBeginEnvironment{adjustwidth}{\partopsep0pt}
+\pagestyle{empty}
+\setcounter{secnumdepth}{0}
+\setlength{\parindent}{0pt}
+\setlength{\topskip}{0pt}
+\setlength{\columnsep}{0.15cm}
+\pagenumbering{gobble}
+
+% \needspace keeps a section title from sitting alone at the bottom of a page.
+\titleformat{\section}{\needspace{4\baselineskip}\bfseries\large}{}{0pt}{}[\vspace{1pt}\titlerule]
+\titlespacing{\section}{-1pt}{0.3cm}{0.2cm}
+
+\renewcommand\labelitemi{$\vcenter{\hbox{\small$\bullet$}}$}
+
+% The bullets of an entry live in a MINIPAGE: never split across two pages, and
+% the \nopagebreak glues them to the title that precedes them.
+\newenvironment{highlights}{
+    \par\nopagebreak
+    \begin{minipage}{\textwidth}
+    \begin{itemize}[topsep=0.10 cm,parsep=0.10 cm,partopsep=0pt,itemsep=0pt,leftmargin=10pt]
+}{
+    \end{itemize}
+    \end{minipage}\par
+}
+
+\newenvironment{onecolentry}{
+    \begin{adjustwidth}{0cm}{0cm}
+}{
+    \end{adjustwidth}
+}
+
+% Two-column entry: text on the left, dates right-aligned.
+\newenvironment{twocolentry}[1]{%
+  \def\secondColumn{#1}%
+  \par
+  \setcolumnwidth{\fill,4.5cm}%
+  \begin{paracol}{2}%
+    \raggedright
+}{%
+    \switchcolumn
+    \raggedleft\strut\secondColumn\par
+  \end{paracol}\par\nopagebreak
+}
+
+\newenvironment{header}{
+    \setlength{\topsep}{0pt}\par\kern\topsep\centering\linespread{1.5}
+}{
+    \par\kern\topsep
+}
+
+\begin{document}
+
+\begin{header}
+    {\fontsize{25pt}{25pt}\selectfont \textbf{Example Candidate}}\\[6pt]
+    \normalsize
+    Full Stack Software Engineer \\[6pt]
+    \href{mailto:candidate@example.com}{candidate@example.com}
+    \,|\,
+    \href{tel:+490000000000}{+49 000 000 000}
+    \,|\,
+    Berlin, Germany
+    \\[3pt]
+    \href{https://www.linkedin.com/in/example}{linkedin.com/in/example}
+    \,|\,
+    \href{https://github.com/example}{github.com/example}
+    \,|\,
+    \href{https://example.com}{example.com}
+\end{header}
+
+\vspace{0.3cm}
+
+% --------------------------------------
+\section{PROFESSIONAL EXPERIENCE}
+
+\begin{twocolentry}{Mar~2025--Present}
+\textbf{Software Engineer (Full Stack), ExampleCorp -- Berlin, Germany}
+\end{twocolentry}
+\begin{highlights}
+\item Build internal platforms in \textbf{React}, \textbf{NestJS} and \textbf{PostgreSQL}, organised as a \textbf{TypeScript} monorepo.
+\item Cut the median page load from 3.1 s to 0.9 s by moving data fetching to the server and caching hot queries.
+\item Wrote the end-to-end test suite in \textbf{Playwright} that now gates every release.
+\end{highlights}
+
+\vspace{0.2cm}
+
+\begin{twocolentry}{Sep~2023--Feb~2025}
+\textbf{Software Engineer (Front End), Sample Labs -- Remote}
+\end{twocolentry}
+\begin{highlights}
+\item Rebuilt a legacy dashboard in \textbf{React} and \textbf{Next.js}, with \textbf{TanStack Query} for server state.
+\item Shipped an \textbf{LLM}-backed search feature from prototype to production in six weeks.
+\end{highlights}
+
+% --------------------------------------
+\section{EDUCATION}
+
+\begin{twocolentry}{2021--2023}
+\textbf{Example University}\\
+MSc in Computer Science
+\end{twocolentry}
+
+% --------------------------------------
+\section{PROJECTS}
+
+\begin{onecolentry}
+\textbf{Job Scout} -- a job search pipeline: public ATS pollers, triage by hard exclusions, agent-assisted applications.
+\end{onecolentry}
+
+% --------------------------------------
+\section{SKILLS}
+
+\begin{onecolentry}
+\textbf{Languages:} TypeScript, JavaScript, SQL \\
+\textbf{Frameworks:} React, Next.js, Node.js, NestJS \\
+\textbf{Tooling:} PostgreSQL, Docker, GitHub Actions, Playwright \\
+\textbf{Spoken:} English (fluent), German (professional)
+\end{onecolentry}
+
+\end{document}

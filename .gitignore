@@ -34,6 +34,7 @@ dist/
 *.tsbuildinfo
 dashboard/src/data/applications.json
 dashboard/src/data/records.json
+dashboard/src/data/stories.json
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal

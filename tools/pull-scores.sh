@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copies the scores of the dashboard's Evaluations tab (SQLite on the host's
+# Copies the scores of the dashboard's Evaluations review queue (SQLite on the host's
 # volume) into evals/scores.jsonl, so git keeps their history and the LLM judge
 # can calibrate from the repo (evals/README.md, layer 3).
 #

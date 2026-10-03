@@ -1,0 +1,38 @@
+date_applied,company,role,source,link,remote,salary_shown,cv_version,status,notes
+2026-08-04,Acme Cloud,"Backend Engineer, Billing","Ashby, watchlist",https://jobs.example.com/acme-cloud/backend-billing,"Berlin, hybrid 3 days","65,000 - 80,000 EUR",cv-en-v1,rejected,"Rejected on paper after 3 days, no reason given. Fictional demo row."
+2026-08-04,Globex,Full Stack Engineer,LinkedIn,https://jobs.example.com/globex/full-stack,Remote (EU),,cv-en-v1,rejected,Generic rejection mail on day 5.
+2026-08-05,Initech,"Software Engineer, Platform","Greenhouse, watchlist",https://jobs.example.com/initech/platform,"Berlin, office",58k-70k EUR,cv-en-v1,applied,"Sent through the Greenhouse form, confirmation mail received."
+2026-08-06,Umbrella Analytics,Product Engineer,Welcome to the Jungle,https://jobs.example.com/umbrella-analytics/product-engineer,"Hamburg, hybrid",60-75k €,cv-en-v1,rejected,"INTERVIEW OBTAINED: recruiter call on day 2, then a technical interview. Rejected after the technical round: wanted more years on the data side."
+2026-08-06,Hooli,Frontend Engineer,LinkedIn Easy Apply,https://jobs.example.com/hooli/frontend,Remote (EU),,cv-en-v1,applied,"Easy Apply, clicked by hand."
+2026-08-06,Pied Piper,"Software Engineer, Compression",Referral from a former colleague,https://jobs.example.com/pied-piper/swe,Remote (EU),"70,000 - 90,000 EUR",cv-en-v2,interview,"INTERVIEW OBTAINED: referral answered within a day. Hiring manager round done, system design round next week."
+2026-08-11,Vandelay Industries,Full Stack Developer,"Lever, discover",https://jobs.example.com/vandelay/full-stack,"Munich, hybrid","50,000 - 58,000 EUR",cv-en-v1,withdrawn,"Read the body after the form was ready: tops out below the floor. Dropped by choice, never sent."
+2026-08-12,Soylent Labs,AI Engineer,Web workflow,https://jobs.example.com/soylent-labs/ai-engineer,"Amsterdam, hybrid",75k-95k EUR,cv-en-v2,rejected,Rejected on paper on day 6.
+2026-08-12,Cyberdyne Systems,Backend Engineer,"SmartRecruiters, watchlist",https://jobs.example.com/cyberdyne/backend,"Berlin, office",,cv-en-v1,closed,"Req closed two weeks after sending, the role was cancelled."
+2026-08-13,Tyrell Data,Data Platform Engineer,LinkedIn,https://jobs.example.com/tyrell-data/platform,Remote (EU),"62,000 - 74,000 EUR",cv-en-v2,applied,No answer so far.
+2026-08-18,Wonka Payments,"Software Engineer, Payments","Ashby, watchlist",https://jobs.example.com/wonka-payments/swe,"Berlin, hybrid",68k-82k EUR,cv-en-v2,rejected,Rejected on paper on day 2.
+2026-08-18,Massive Dynamic,Full Stack Engineer,"Teamtailor, discover",https://jobs.example.com/massive-dynamic/full-stack,Remote (DE),,cv-en-v2,applied,"Sent, confirmation page captured."
+2026-08-19,Aperture Science,"Product Engineer, Testing Tools","Workable, watchlist",https://jobs.example.com/aperture/product-engineer,"Hamburg, hybrid","55,000 - 66,000 EUR",cv-en-v2,applied,
+2026-08-20,Black Mesa Research,Software Engineer,"Careers page, direct",https://jobs.example.com/black-mesa/swe,"Berlin, office",,cv-en-v2,closed,NEVER SENT: the posting was gone at the moment of applying.
+2026-08-25,Veridian Dynamics,"Frontend Engineer, Design System","Recruitee, discover",https://jobs.example.com/veridian/frontend,Remote (EU),"60,000 - 72,000 EUR",cv-en-v2,rejected,"INTERVIEW OBTAINED: one call with the design system lead. Rejected afterwards, went with an internal candidate."
+2026-08-25,Spacely Sprockets,Backend Engineer,LinkedIn,https://jobs.example.com/spacely/backend,"Munich, hybrid",,cv-en-v2,applied,
+2026-08-25,Cogswell Cogs,TypeScript Engineer,"Personio, watchlist",https://jobs.example.com/cogswell/ts-engineer,"Berlin, hybrid",52k-61k EUR,cv-en-v2,rejected,Rejected on paper.
+2026-08-26,Planet Express,"Software Engineer, Logistics",Welcome to the Jungle,https://jobs.example.com/planet-express/swe,Remote (EU),"64,000 - 78,000 EUR",cv-en-v2,applied,No answer so far.
+2026-09-01,Virtucon,Full Stack Engineer,LinkedIn Easy Apply,https://jobs.example.com/virtucon/full-stack,"London, hybrid","£55,000 - £70,000",cv-en-v2,rejected,"Rejected on day 1, automated."
+2026-09-01,InGen Bio,"Software Engineer, Lab Platform","Greenhouse, watchlist",https://jobs.example.com/ingen-bio/swe,"Berlin, hybrid","66,000 - 80,000 EUR",cv-en-v3,interview,INTERVIEW OBTAINED: recruiter call booked. WAITING FOR MY REPLY: they asked for three time slots for the technical round.
+2026-09-02,Contoso,"Backend Engineer, Node.js",Web workflow,https://jobs.example.com/contoso/backend-node,Remote (EU),,cv-en-v3,applied,
+2026-09-03,Fabrikam,Product Engineer,"Ashby, discover",https://jobs.example.com/fabrikam/product-engineer,"Hamburg, hybrid","60,000 - 70,000 EUR",cv-en-v3,applied,"Sent, confirmation mail received."
+2026-09-03,Northwind Traders,Software Engineer,LinkedIn,https://jobs.example.com/northwind/swe,"Berlin, office",,cv-en-v3,rejected,Rejected on paper on day 4.
+2026-09-08,Tailspin Toys,"Frontend Engineer, React","Lever, watchlist",https://jobs.example.com/tailspin/frontend,Remote (EU),58k-68k EUR,cv-en-v3,applied,
+2026-09-09,Wingtip Labs,AI Product Engineer,Web workflow,https://jobs.example.com/wingtip/ai-product,"Amsterdam, hybrid","72,000 - 88,000 EUR",cv-en-v3,interview,INTERVIEW OBTAINED: invitation the day after sending. Take-home due next week.
+2026-09-09,Litware,Full Stack Engineer,"Teamtailor, watchlist",https://jobs.example.com/litware/full-stack,Remote (DE),,cv-en-v3,to_finish,"Form filled, waiting for a second read of the cover letter before sending."
+2026-09-15,Proseware,"Backend Engineer, Search","Workable, discover",https://jobs.example.com/proseware/backend-search,"Munich, hybrid","63,000 - 76,000 EUR",cv-en-v3,applied,
+2026-09-15,Fourth Coffee,Software Engineer,Referral from a meetup,https://jobs.example.com/fourth-coffee/swe,"Berlin, hybrid",,cv-en-v3,applied,Referral sent the resume internally.
+2026-09-16,Woodgrove Bank,"TypeScript Engineer, Platform","SmartRecruiters, watchlist",https://jobs.example.com/woodgrove/ts-platform,"Berlin, office",70k-84k EUR,cv-en-v3,closed,"Req closed after sending, hiring freeze announced."
+2026-09-17,Trey Research,Product Engineer,LinkedIn,https://jobs.example.com/trey-research/product,Remote (EU),,cv-en-v3,withdrawn,"The body asks for 6+ years, outside the band. Dropped by choice."
+2026-09-22,Relecloud,"Software Engineer, Infrastructure","Ashby, watchlist",https://jobs.example.com/relecloud/infra,Remote (EU),"67,000 - 81,000 EUR",cv-en-v3,applied,"Sent, confirmation mail received."
+2026-09-22,Wide World Importers,Full Stack Engineer,Welcome to the Jungle,https://jobs.example.com/wide-world/full-stack,"Hamburg, hybrid",,cv-en-v3,to_finish,Two free-text questions left to validate.
+2026-09-23,Alpine Ski House,Frontend Engineer,"Recruitee, discover",https://jobs.example.com/alpine-ski-house/frontend,"Munich, office","48,000 - 56,000 EUR",cv-en-v3,withdrawn,"Below the floor, noticed while reading the body. Never sent."
+2026-09-29,Kramerica,Backend Engineer,LinkedIn Easy Apply,https://jobs.example.com/kramerica/backend,Remote (EU),,cv-en-v3,applied,
+2026-09-29,Bluth Company,"AI Engineer, Agents",Web workflow,https://jobs.example.com/bluth/ai-engineer,"Berlin, hybrid","75,000 - 92,000 EUR",cv-en-v3,applied,"Sent, the posting quotes the agent tooling the side project uses."
+2026-10-01,Prestige Worldwide,Software Engineer,"Greenhouse, watchlist",https://jobs.example.com/prestige-worldwide/swe,Remote (EU),62k-75k EUR,cv-en-v3,to_finish,Ready to send after the cover letter check.
+2026-10-02,Rekall,Software Engineer,LinkedIn,https://jobs.example.com/rekall/swe,"Hamburg, office",,cv-en-v3,applied,

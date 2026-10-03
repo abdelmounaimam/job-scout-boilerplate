@@ -137,7 +137,7 @@ An ATS field, a cover letter, an application mail, a reply to a recruiter, a Lin
 2. Write the draft, then fill `posting_quotes` (the lines of the posting it rests on, verbatim), `stories`, `claims` (every verifiable fact linked to its id) and `angle`.
 3. **`node evals/check.mjs <id>` must exit 0 BEFORE the draft is shown.** A failure is fixed, never bypassed. The checks read their candidate-specific inputs from `WRITING` in the profile (dash rule, notice wordings, the blocklist protecting the current salary).
 4. Once validated, fill `final` with the text that really went out (corrections included) and set `status: sent`. **The diff between `draft` and `final` is the richest evaluation signal of the loop: never overwrite `draft`.**
-5. Deploy the dashboard (as for the tracker) so the text shows in the Evaluations tab. `tools/pull-scores.sh` brings the scores back into `evals/scores.jsonl`, committed; run it before any session that revises the writing rules.
+5. Deploy the dashboard (as for the tracker) so the text shows in the Evaluations review queue. `tools/pull-scores.sh` brings the scores back into `evals/scores.jsonl`, committed; run it before any session that revises the writing rules.
 6. A low score becomes a written rule (`applications/answers-bank.md`, this file, or the « Known don'ts » of the catalogue); a 5/5 or a rewrite becomes an example read before writing. An LLM judge may later score in the candidate's place, only on the axes where it agrees with the human scores, **never on truth**.
 
 `tools/build-letter.sh` enforces it for letters: it refuses a body that no record carries, or whose record fails its checks.
@@ -154,7 +154,7 @@ An ATS field, a cover letter, an application mail, a reply to a recruiter, a Lin
 - ⚠️⚠️ **Every write to `applications.csv` (and every record added or completed in `evals/records.jsonl`) ends with a dashboard deploy** when `DASHBOARD.enabled`: `node dashboard/scripts/build-data.mjs` then `./tools/deploy-dashboard.sh --detach`. The data JSON is gitignored and rebuilt in the container, so a commit changes nothing online and nothing signals the omission: the page shows stale numbers without error.
 - **A deploy is good only with `SUCCESS` on the host AND the URL answering 401** (Basic auth, so it serves). **404 means it is down.** « The script ran » is not the check, and a detached deploy whose end nobody read proves nothing. Watch the host's deprecation notices: a config format with an end date breaks the deploy path on that date.
 - The dashboard **never writes** the CSV. It refuses to start without a password: never serve the search unauthenticated.
-- Its only write is the scores of the Evaluations tab, to SQLite at `SCORES_DB`. ⚠️ **Deployed, that path must be on a volume** (Railway: a volume mounted at `/data`, `SCORES_DB=/data/scores.sqlite`), and the volume is never detached: without it, every redeploy (one per tracker write) starts on an empty database, silently. The deploy log line « scores in … » says where they go.
+- Its only write is the scores of the Evaluations review queue, to SQLite at `SCORES_DB`. ⚠️ **Deployed, that path must be on a volume** (Railway: a volume mounted at `/data`, `SCORES_DB=/data/scores.sqlite`), and the volume is never detached: without it, every redeploy (one per tracker write) starts on an empty database, silently. The deploy log line « scores in … » says where they go.
 - **Update `progress.md` after every session**, and commit.
 
 ## Scripts and automation

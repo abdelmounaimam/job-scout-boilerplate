@@ -1,5 +1,5 @@
 /**
- * Static server for the dashboard, plus the scores API of the Evaluations tab,
+ * Static server for the dashboard, plus the scores API of the Evaluations review queue,
  * behind HTTP Basic authentication.
  *
  * ⚠️ WHY THIS SERVER EXISTS
@@ -61,7 +61,7 @@ function constantTimeEqual(a: string, b: string): boolean {
 const ROOT = new URL("./dist/", import.meta.url);
 
 /**
- * Scores of the free-text outputs (Evaluations tab, spec in evals/README.md).
+ * Scores of the free-text outputs (Evaluations review queue, spec in evals/README.md).
  *
  * ⚠️ This is the ONLY write the dashboard does. The applications stay read only
  * from the CSV; scores get their own database because they are born here, in

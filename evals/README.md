@@ -69,7 +69,7 @@ Clean ownership: **the agent never writes a score, the dashboard never writes a 
 
 Nothing candidate-specific is hardcoded in `check.mjs`: it reads `profile/profile.mjs` and `profile/stories.md`. Run it on another file with `--file` (the fixtures, a test).
 
-### Layer 2: human scores, 1 to 5 per axis (dashboard, Evaluations tab)
+### Layer 2: human scores, 1 to 5 per axis (dashboard, Evaluations review queue)
 
 | Axis | The question the rater answers |
 |---|---|
@@ -90,7 +90,7 @@ Same rubric, scored blind. Measure its agreement with the human scores on a batc
 
 1. The agent writes a draft from `profile/stories.md`, records the line, runs `node evals/check.mjs <id>`, and fixes until it passes. A failure is fixed, never bypassed.
 2. The candidate validates or corrects; `final` is filled with what really went out and `status` becomes `sent`.
-3. A dashboard deploy (as for the tracker) makes the text appear in the Evaluations tab. The candidate scores when they want.
+3. A dashboard deploy (as for the tracker) makes the text appear in the Evaluations review queue. The candidate scores when they want.
 4. `tools/pull-scores.sh` brings the scores back into `scores.jsonl`, committed.
 5. Every pattern scored low becomes a written rule (`applications/answers-bank.md`, `CLAUDE.md`, the « Known don'ts » of `profile/stories.md`). Every 5/5 and every rewrite becomes an example read before writing.
 6. The outcome of the application stays a **secondary** signal: n too small, rejections without a reason, too many factors mixed (resume, level, timing). It shows a gross pattern, it does not score a text.
@@ -111,4 +111,4 @@ railway variable set SCORES_DB=/data/scores.sqlite --project "$RAILWAY_PROJECT_I
 
 ⚠️ Never detach that volume nor remove the variable afterwards: the next deploy would start on an empty database, without any error.
 
-Locally: `cd dashboard && bun run build && DASHBOARD_PASSWORD=<12+ characters> SCORES_DB=/tmp/scores.sqlite bun server.ts`. `bun dev` serves the page only, so the tab shows the texts and disables scoring.
+Locally: `cd dashboard && bun run build && DASHBOARD_PASSWORD=<12+ characters> SCORES_DB=/tmp/scores.sqlite bun server.ts`. `bun dev` serves the page only, so the review queue shows the texts and disables scoring, unless it is started with `DASHBOARD_URL` and `DASHBOARD_PASSWORD` to relay `/api` to a running server. To see the whole loop on fictional data first: `cd dashboard && bun run demo` (walkthrough in [`../docs/DASHBOARD.md`](../docs/DASHBOARD.md)).

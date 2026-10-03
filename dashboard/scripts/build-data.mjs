@@ -15,9 +15,23 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const CSV = resolve(HERE, "../../applications/applications.csv");
-const PROFILE = resolve(HERE, "../../profile/profile.mjs");
+
+/* DEMO MODE (DASHBOARD_DEMO=1, set by `bun run demo` and `bun run dev:demo`).
+ * Every input is read from dashboard/demo/ instead of the real files: a
+ * fictional tracker, fictional free texts, a copy of the example story
+ * catalogue and a demo profile. The real tracker, records, catalogue and
+ * profile are never opened in this mode, so a screenshot or a first look can
+ * never leak them. The outputs are the same generated files as a normal build
+ * (src/data/*.json, gitignored): the next `bun run data` or `bun run build`
+ * without the variable brings your own data back. */
+const DEMO = /^(1|true|yes)$/i.test(process.env.DASHBOARD_DEMO ?? "");
+const DEMO_DIR = resolve(HERE, "../demo");
+const CSV = DEMO ? resolve(DEMO_DIR, "applications.csv") : resolve(HERE, "../../applications/applications.csv");
+const PROFILE = DEMO ? resolve(DEMO_DIR, "profile.mjs") : resolve(HERE, "../../profile/profile.mjs");
+const RECORDS = DEMO ? resolve(DEMO_DIR, "records.jsonl") : resolve(HERE, "../../evals/records.jsonl");
+const STORIES = DEMO ? resolve(DEMO_DIR, "stories.md") : resolve(HERE, "../../profile/stories.md");
 const OUT = resolve(HERE, "../src/data/applications.json");
+if (DEMO) console.log("DEMO MODE: reading dashboard/demo/, your own data is not read");
 
 // --- settings from the profile ------------------------------------------------
 // The dashboard hardcodes no candidate fact: title, locale, currency, floor and
@@ -37,6 +51,9 @@ const config = {
   // 'never' (the default) = no chaser block anywhere on the page. Only a number
   // of days turns the "chasers due" block on.
   followUps: typeof profile.RULES?.followUps === "number" ? profile.RULES.followUps : null,
+  // Shown in the sidebar, so a demo build is never mistaken for real data.
+  demo: DEMO,
+  demoShiftDays: 0,
 };
 
 /** Full CSV parser: quotes, doubled quotes, line breaks inside a field. */
@@ -214,6 +231,24 @@ if (problems.length) {
 
 const raw = rows.slice(1).map((l) => Object.fromEntries(header.map((c, i) => [c, (l[i] ?? "").trim()])));
 
+/* In demo mode the dates are shifted so the newest row is yesterday: the demo
+ * reads the same whenever it is run (waiting applications stay "waiting"
+ * instead of all turning into silences older than SILENCE_DAYS). The same
+ * shift is applied to the records' dates below, and scripts/demo.ts applies
+ * it to the seeded scores. */
+const DAY = 86_400_000;
+const isoDate = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s);
+if (DEMO) {
+  const newest = raw.map((r) => r.date_applied).filter(isoDate).sort().at(-1);
+  if (newest) {
+    const yesterday = Date.parse(new Date(Date.now() - DAY).toISOString().slice(0, 10));
+    config.demoShiftDays = Math.round((yesterday - Date.parse(newest)) / DAY);
+  }
+}
+const shift = (s) =>
+  DEMO && isoDate(s) ? new Date(Date.parse(s) + config.demoShiftDays * DAY).toISOString().slice(0, 10) : s;
+for (const r of raw) r.date_applied = shift(r.date_applied);
+
 const applications = raw.map((r, i) => ({
   id: i,
   date: r.date_applied,
@@ -256,7 +291,6 @@ console.log(`  ${myCourt.length} waiting for MY reply: ${myCourt.map((c) => c.co
  * server's SQLite database (server.ts), never here. An unreadable line stops
  * the build, for the same reason as the CSV guardrail above: a broken datum
  * must break the build, not the page. A missing file is fine (no text yet). */
-const RECORDS = resolve(HERE, "../../evals/records.jsonl");
 const RECORDS_OUT = resolve(HERE, "../src/data/records.json");
 let records = [];
 if (existsSync(RECORDS)) {
@@ -269,6 +303,30 @@ if (existsSync(RECORDS)) {
     process.exit(1);
   }
 }
+for (const r of records) r.date = shift(r.date);
 writeFileSync(RECORDS_OUT, JSON.stringify(records) + "\n");
 const failing = records.filter((r) => r.checks && !r.checks.ok);
 console.log(`${records.length} free-text record(s) → src/data/records.json${failing.length ? `, ${failing.length} failing their checks` : ""}`);
+
+/* The story catalogue (profile/stories.md), for the Stories page and for the
+ * evidence of each text: every story and fact is crossed with the texts that
+ * use it and their scores. Read from the table rows « | [ID] | ... | »: a
+ * story row has four columns after the id (story, what it proves, citable
+ * facts, source), a fact row two (fact, source). A missing file is fine: the
+ * page then says the catalogue is empty. */
+const STORIES_OUT = resolve(HERE, "../src/data/stories.json");
+const stories = [];
+if (existsSync(STORIES)) {
+  for (const line of readFileSync(STORIES, "utf8").split("\n")) {
+    const m = line.match(/^\|\s*\[((?:ST|FACT)-[A-Z0-9-]+)\]\s*\|(.*)\|\s*$/);
+    if (!m) continue;
+    const cols = m[2].split("|").map((c) => c.trim().replace(/\*\*|`/g, ""));
+    stories.push(
+      m[1].startsWith("ST-")
+        ? { id: m[1], type: "story", title: cols[0] ?? "", proves: cols[1] ?? "", facts: cols[2] ?? "", source: cols[3] ?? "" }
+        : { id: m[1], type: "fact", title: cols[0] ?? "", proves: "", facts: "", source: cols[1] ?? "" },
+    );
+  }
+}
+writeFileSync(STORIES_OUT, JSON.stringify(stories) + "\n");
+console.log(`${stories.length} stories and facts → src/data/stories.json`);

@@ -6,6 +6,8 @@ dist
 src/data/applications.json
 # Baked from ../evals/records.jsonl at every build, same reason.
 src/data/records.json
+# Parsed from ../profile/stories.md at every build, same reason.
+src/data/stories.json
 # The scores database when the server runs locally. In production it lives on
 # a volume (SCORES_DB), never in the repo; tools/pull-scores.sh mirrors it.
 scores.sqlite*

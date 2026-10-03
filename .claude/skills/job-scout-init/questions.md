@@ -231,7 +231,7 @@ Then free text: cover-letter languages, confirm the upload name `LASTNAME_FIRSTN
       { "label": "No, I write with dashes", "description": "The check is turned off; every other check stays." } ] },
   { "header": "Scoring", "question": "Where will you score the texts the agent writes for you?", "multiSelect": false,
     "options": [
-      { "label": "In the dashboard (Recommended)", "description": "Evaluations tab, six axes from 1 to 5, a comment, your own version. Needs the server running (deployed, or bun server.ts locally)." },
+      { "label": "In the dashboard (Recommended)", "description": "Evaluations review queue, six axes from 1 to 5, a comment, your own version. Needs the server running (deployed, or bun server.ts locally)." },
       { "label": "In the conversation only", "description": "You correct the drafts; the draft/final diff in evals/records.jsonl is still recorded and still teaches." } ] }
 ] }
 ```

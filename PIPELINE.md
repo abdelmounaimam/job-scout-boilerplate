@@ -125,7 +125,7 @@ flowchart TD
         DEPLOY["tools/deploy-dashboard.sh"]
         CHECK{"SUCCESS + URL answers 401 ?"}
         DASH["Dashboard<br/>funnel · pace · sources · bands<br/>waiting for my reply"]
-        EVAL["Evaluations tab<br/>scores 1 to 5 on 6 axes → SQLite (volume /data)"]
+        EVAL["Evaluations review queue<br/>scores 1 to 5 on 6 axes → SQLite (volume /data)"]
         PULL["pull-scores.sh → evals/scores.jsonl"]
         RULES["low scores → written rules<br/>5/5 and rewrites → examples"]
 
@@ -153,7 +153,7 @@ flowchart TD
 - **Discovery loop**: the web and bootstrap workflows find new names and propose them for `candidates.json`. `discover.mjs --promote` moves the ones with a live board into `watchlist.json`, which the poller then watches for good. Each pass permanently widens what the poller covers, and a slug already tried in vain is not probed again, so passes get shorter.
 - **Two guards**: `doctor` skips the LinkedIn scan when an endpoint is dead, because an empty digest looks like a quiet week. The dump is written to a `.partial` file and replaces the old one only on success.
 - **Dashboard deploy**: good only with `SUCCESS` on the host and the URL answering `401` (Basic auth, so it serves). A `404` means it is down.
-- **Evaluation loop**: every free text is traced in `evals/records.jsonl` and checked by `evals/check.mjs` before the candidate sees it, then scored in the Evaluations tab. Scores come back into the repo through `pull-scores.sh` and turn into rules. The scores database lives on a volume, or each deploy wipes it. Spec in [`evals/README.md`](./evals/README.md).
+- **Evaluation loop**: every free text is traced in `evals/records.jsonl` and checked by `evals/check.mjs` before the candidate sees it, then scored in the Evaluations review queue. Scores come back into the repo through `pull-scores.sh` and turn into rules. The scores database lives on a volume, or each deploy wipes it. Spec in [`evals/README.md`](./evals/README.md).
 - **Dotted arrows**: orchestration or side use, not data flow.
 
 ## 2. A pass, step by step
@@ -251,7 +251,7 @@ flowchart TD
     MAIL --> CSV
 
     PROG --> LATER["Later: inbox review in context<br/>rejection → real reason written · interview → interview-prep/company<br/>chasers only if RULES.followUps allows"]
-    PROG --> SCORE["Whenever: the Evaluations tab<br/>the candidate scores, pull-scores.sh, rules updated"]
+    PROG --> SCORE["Whenever: the Evaluations review queue<br/>the candidate scores, pull-scores.sh, rules updated"]
 
     classDef human stroke:#c7771f,stroke-width:3px
     class PICK,YOU,VAL,SCORE human
@@ -267,4 +267,4 @@ flowchart TD
 | workflow `job-scout-web` | weekly, or on a targeted need | tokens |
 | workflow `job-scout-bootstrap` | at setup, then every 2 to 3 months ([`docs/METHOD.md`](./docs/METHOD.md)) | tokens, the most expensive |
 | `glassdoor.mjs brief` | before an interview | a browser must run |
-| Scoring the free texts (Evaluations tab), then `tools/pull-scores.sh` | whenever the candidate likes; pull before revising the writing rules | minutes |
+| Scoring the free texts (Evaluations review queue), then `tools/pull-scores.sh` | whenever the candidate likes; pull before revising the writing rules | minutes |

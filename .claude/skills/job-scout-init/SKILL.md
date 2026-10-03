@@ -133,7 +133,7 @@ If Composio is chosen and no Gmail connection exists, offer `composio link gmail
 
 If Railway: they create the project, you write `.env` (gitignored) with `RAILWAY_PROJECT_ID`, `RAILWAY_ENVIRONMENT_ID`, `RAILWAY_SERVICE_NAME` and `DASHBOARD_URL`, and they set `DASHBOARD_PASSWORD` (12 characters or more) with `railway variables --set`. The server refuses to start without it, on purpose. A 401 on the URL means it serves; a 404 means it is down. → `DASHBOARD`.
 
-⚠️ **Also attach a volume and point the scores database at it**, before the first deploy: the Evaluations tab writes scores to SQLite, and the container's disk is wiped at every deploy (one per tracker write).
+⚠️ **Also attach a volume and point the scores database at it**, before the first deploy: the Evaluations review queue writes scores to SQLite, and the container's disk is wiped at every deploy (one per tracker write).
 
 ```bash
 railway volume --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_ENVIRONMENT_ID" --service "$RAILWAY_SERVICE_NAME" add --mount-path /data

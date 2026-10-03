@@ -32,6 +32,10 @@ export type Config = {
   salaryFloor: number | null;
   /** Days before a chaser is due, or null when the policy is "never chase". */
   followUps: number | null;
+  /** True when built from dashboard/demo/ (DASHBOARD_DEMO=1): the sidebar says so. */
+  demo?: boolean;
+  /** Days added to the demo dates so the newest row is yesterday. */
+  demoShiftDays?: number;
 };
 
 export const CONFIG = data.config as Config;

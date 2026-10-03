@@ -2,45 +2,89 @@
 
 A read-only view of `applications/applications.csv`. **It changes no
 application**: the CSV stays the source of truth, the dashboard is only its
-mirror. React, Tailwind, shadcn-style components written in place, Recharts,
-served by Bun behind HTTP Basic auth.
+mirror. React, Tailwind, shadcn/ui components (Radix), TanStack Table and
+TanStack Query, Recharts, lucide icons, served by Bun behind HTTP Basic auth.
+A sidebar holds two sections: **Job search** (Overview, Applications,
+Insights) and **Evaluations** (Summary, Review queue, Checks, Stories,
+Rubric). On a phone the sidebar becomes a drawer.
 
-⚠️ **One exception: the Evaluations tab writes SCORES.** It shows the free texts
-of `../evals/records.jsonl` (baked at build time like the CSV) and stores the
+👉 **The page by page guide, with screenshots and the scoring workflow, is
+[`../docs/DASHBOARD.md`](../docs/DASHBOARD.md).** This file is about building,
+running and deploying it.
+
+⚠️ **One exception: the Evaluations pages write SCORES.** They show the free
+texts of `../evals/records.jsonl` and the story catalogue of
+`../profile/stories.md` (both baked at build time like the CSV) and store the
 candidate's scores in a SQLite database served by `server.ts` (`/api/scores`,
 same Basic auth). Spec and rubric in [`../evals/README.md`](../evals/README.md).
 
-Title, locale, currency, salary floor and chaser policy come from
+Title, locale, currency, salary floor, chaser policy and login come from
 `profile/profile.mjs` (`DASHBOARD`, `TARGET`, `RULES.followUps`). No candidate
 fact is hardcoded here.
 
 ```bash
 cd dashboard
 bun install     # once
-bun dev         # http://127.0.0.1:5180
+bun run demo    # fictional data, scoring included: see "Demo mode" below
+bun dev         # your data, http://127.0.0.1:5180
 ```
 
 `bun dev` regenerates the data at startup **and watches the CSV** (and the
-profile): as soon as a scan or an application changes it, the page reloads by
-itself. To regenerate by hand without a server: `bun run data`.
+profile, the records and the catalogue): as soon as a scan or an application
+changes them, the page reloads by itself. To regenerate by hand without a
+server: `bun run data`.
 
-## Scores of the free texts (Evaluations tab, `#evaluations`)
+## Demo mode (`bun run demo`)
+
+A fictional dataset lives in `demo/`: a tracker of 37 applications at invented
+companies, 15 free texts (some passing their checks, some failing, some edited
+before sending), a copy of the example story catalogue, a demo profile and 11
+scores. It feeds the screenshots of `../docs/screenshots/` and lets a new user
+see every page before onboarding.
+
+- `bun run demo` builds with `DASHBOARD_DEMO=1` (only `demo/` is read, never
+  the real tracker, records, catalogue or profile), seeds a **temporary**
+  SQLite database from `demo/scores.jsonl`, forces `SCORES_DB` to it, and starts
+  `server.ts`. The database is deleted when the server stops. Login `demo`, a
+  random password printed at startup (or `DASHBOARD_USER` /
+  `DASHBOARD_PASSWORD`), `PORT` 8080 by default. `--skip-build` reuses the last
+  demo build.
+- Demo dates are shifted so the newest row is yesterday.
+- `bun run dev:demo` runs `vite` on the demo data, read only.
+- The sidebar shows a "Demo data" badge.
+- ⚠️ The demo overwrites the generated `src/data/*.json` and `dist/`: run
+  `bun run build` before serving your own data again. The deploy is not
+  affected (`demo/` is not shipped, and the container builds from the real
+  files).
+- After editing `demo/records.jsonl`, refresh its checks from the repo root:
+  `node evals/check.mjs --file dashboard/demo/records.jsonl --write` (with the
+  example profile still in place, since the checks read `profile/`).
+
+## Scores of the free texts (Evaluations pages, `#/evaluations`)
 
 | Piece | Role |
 |---|---|
-| `scripts/build-data.mjs` | bakes `evals/records.jsonl` into `src/data/records.json`; an unreadable line stops the build |
+| `scripts/build-data.mjs` | bakes `evals/records.jsonl` into `src/data/records.json` (an unreadable line stops the build) and the rows of `profile/stories.md` into `src/data/stories.json` |
 | `server.ts`, `/api/scores` | `GET` every score, `POST` one (six axes from 1 to 5, a comment, a rewrite). Append-only table: scoring again keeps the history |
 | `SCORES_DB` | the SQLite path. ⚠️⚠️ **Deployed, it must be on a volume** (Railway: a volume mounted at `/data`, `SCORES_DB=/data/scores.sqlite`): without one, every redeploy (one per tracker write) starts on an empty database. With a volume attached and no variable, the server uses the volume's mount path; on Railway without either, it prints a warning at startup |
 | `../tools/pull-scores.sh` | mirrors the scores into `evals/scores.jsonl` for git and for the judge; the password is read from the host's variables, never written |
 
-The tab joins each text to its application by company name (whole leading
-words, never a substring) to show the outcome next to it, without copying it
-into the record. Locally, `bun dev` serves the page only (the tab says so and
-disables scoring). To try scoring:
+The review queue joins each text to its application by company name (whole
+leading words, never a substring) to show the outcome next to it, without
+copying it into the record. A claim is "unsourced" when its source is not an id
+of the catalogue. Locally, `bun dev` serves the page only (the review queue
+says so and disables scoring). To score:
 
 ```bash
+# against a local server and a throwaway database
 bun run build && DASHBOARD_PASSWORD=<12+ characters> SCORES_DB=/tmp/scores.sqlite bun server.ts
+# or from bun dev, relaying /api to a running server (your deployed one), so
+# every score lands in ONE database and pull-scores.sh sees them all
+DASHBOARD_URL=https://<your-dashboard> DASHBOARD_PASSWORD=<its password> bun dev
 ```
+
+Set `DASHBOARD_USER` too when your login is not `candidate`. The relay is never
+active in demo mode.
 
 ## ⚠️⚠️ The rule: every write to the tracker ends with a rebuild and a deploy
 
@@ -76,7 +120,7 @@ build prints what it recognised at every run: that printout is the guardrail.
 | Marker | Write it when | What it feeds |
 |---|---|---|
 | `INTERVIEW OBTAINED` | an invitation arrives, whatever comes next | the funnel's "Interview obtained" branch, which a rejection afterwards does not erase |
-| `WAITING FOR MY REPLY` | a company answered and waits for you (slots, a form, a question); remove it once you replied | the "They are waiting for your reply" block |
+| `WAITING FOR MY REPLY` | a company answered and waits for you (slots, a form, a question); remove it once you replied | the "Waiting on you" lines of "Needs your action" (Overview) |
 | `NEVER SENT` | a row whose status is not `to_finish` / `withdrawn` but that never went out (posting gone at the moment of applying) | keeps it out of every rate's denominator |
 
 ⚠️ `WAITING FOR MY REPLY` is **not a chaser**. It exists because an interview
@@ -95,17 +139,20 @@ doubtful datum shows as doubtful and never switches the page off.
 
 ## What it shows
 
-| Block | Answers |
+| Page | Answers |
 |---|---|
-| Tiles | How many sent, how many waiting, response rate, how many to handle |
-| **What becomes of the applications** | The Sankey diagram of the funnel, from prepared to last known state. The only block that shows the **conversion rate to interview**. |
-| **To handle** | "They are waiting for your reply", then applications prepared but never sent. A "chasers due" block exists ONLY when `RULES.followUps` is a number of days; with the default `'never'` it does not render at all. |
-| Where the applications stand | Breakdown by status |
-| Sending pace | One bar per day, to see the bursts and the gaps |
-| Where the postings come from | Which source really feeds the pipeline |
-| Ranges shown | The announced bands, placed against the salary floor |
-| All applications | Filterable, searchable table, with a link to every posting |
-| **Evaluations tab** (`#evaluations`) | Every free text with its question, the posting lines it rests on, the angle, the stories and sourced facts, the failing checks, the agent's draft against what was sent, and the scoring form |
+| **Overview** (`#/overview`) | Five tiles (sent, waiting, interviews, response rate, to finish), the Sankey funnel (the only block that shows the **conversion rate to interview**), weekly activity, the breakdown by status, "Needs your action" (waiting on you, to finish, and chasers ONLY when `RULES.followUps` is a number of days), latest sent |
+| **Applications** (`#/applications`) | Every row in a sortable, filterable, paginated table; a side panel with the notes, the posting link and the free texts written for that company |
+| **Insights** (`#/insights`) | Applications and interviews per source family, the daily rhythm, the salary bands shown against `TARGET.salaryFloor` |
+| **Summary** (`#/evaluations`) | Texts scored, average score, failing checks, unsourced claims, average per axis, what the checks catch, progress by channel, score vs outcome, lowest scored |
+| **Review queue** (`#/evaluations/review/<id>`) | The queue with its filters, then one text: question, failing checks, Text / Draft vs sent / Evidence tabs, previous scores, the six-axis form with Save & next, `j` / `k` to move |
+| **Checks** (`#/evaluations/checks`) | Every text with its failure families, and every unsourced claim |
+| **Stories** (`#/evaluations/stories`) | The catalogue with uses, truth and story-choice scores, last use |
+| **Rubric** (`#/evaluations/guide`) | The axes, the three layers, the loop |
+
+Routing is a hash (`#/…`): deep links work behind Basic auth without any
+server rewrite, and the phone's back button walks the history. The old
+`#evaluations` link still lands on the Summary.
 
 ## Visualisation decisions, and why
 
@@ -162,8 +209,9 @@ deployment. On an empty tracker it exits early, since the page shows an empty
 state instead of a diagram.
 
 Dark mode is **chosen**, not an inversion: the same hues re-dosed for the dark
-surface, declared under `@media (prefers-color-scheme: dark)` and under
-`[data-theme="dark"]` so the toggle wins both ways.
+surface, under the `.dark` class. The theme button offers light, dark and
+system (the default); the choice is remembered in `localStorage` when the
+browser allows it.
 
 ## Traps met while building it
 
@@ -182,40 +230,44 @@ surface, declared under `@media (prefers-color-scheme: dark)` and under
 
 ## Responsive and scrolling
 
-Measured at 390, 768, 1024, 1280 and 1536 px, counting overflows in the DOM
-rather than by eye.
-
 **Rule held everywhere: the page NEVER scrolls sideways.** What is too wide
-scrolls inside its own block.
+scrolls inside its own block. Checked at 390 px on every page by measuring
+`scrollWidth` against the viewport, not by eye.
 
-- **Table**: `max-h-[32rem] overflow-auto`, `sticky` header. It scrolls both ways
-  inside its card. Before, dozens of rows lengthened the page until the footer
-  was out of reach, and the column names were lost after ten rows.
-- **Tiles**: `grid-cols-2 sm:grid-cols-3 lg:grid-cols-5`. Five tiles on two
-  columns left the last one orphaned: it takes the full width until there are
-  five columns, which makes it read as an alert banner.
-- **"To handle" lists**: the role goes **under** the company name below `sm`.
-  Side by side, a long title crushed the name one reads first.
-- **Salary ranges**: side columns tightened below `sm` (`4.5rem_1fr_4rem` instead
-  of `7.5rem_1fr_5.5rem`), otherwise 208 px out of 350 went to the name and the
-  amount, leaving almost nothing for the bar.
-
-⚠️ The table keeps `min-w-[720px]`: its columns do not compress below that width
-without becoming unreadable. Its container scrolls, not the page.
+- **Sidebar**: an inset sidebar on a laptop (collapsible to icons, `Ctrl+B` /
+  `Cmd+B`), a drawer on a phone, closed by any navigation.
+- **Tables** (TanStack Table): secondary columns hide below `md` / `lg` / `xl`
+  (the role goes under the company name), 20 rows per page, the table container
+  scrolls rather than the page.
+- **Funnel**: the SVG keeps `min-w-[880px]` and scrolls inside its card; the
+  sentence under it reads without the chart.
+- **Tiles**: `grid-cols-2 lg:grid-cols-5`, the fifth tile takes the full width
+  on two columns instead of sitting alone.
+- **Review queue**: the queue and the text are side by side from `xl`, two views
+  below (a "Queue" button goes back). The score form sits next to the text from
+  `2xl`, under it before; on a phone each axis's 1 to 5 buttons take the full
+  width.
+- **Salary bands**: side columns tighten below `sm`, so the bar keeps room.
 
 ## Structure
 
 ```
-scripts/build-data.mjs    CSV + profile → src/data/applications.json (source families, salary parsing, markers)
+scripts/build-data.mjs    CSV + profile + records + catalogue → src/data/*.json (source families, salary parsing, markers, demo switch)
 scripts/check-funnel.ts   the Sankey geometry, checked by computation
+scripts/demo.ts           bun run demo: demo build, temporary seeded scores database, server
+demo/                     the fictional dataset (tracker, records, catalogue copy, profile, scores)
+src/App.tsx               sidebar layout, breadcrumb, theme toggle, page switch
+src/lib/router.ts         hash routes
 src/lib/metrics.ts        statuses, response rate, aggregates, the funnel tree
 src/lib/funnel-layout.ts  the Sankey layout, pure geometry
-src/components/           Tiles, Funnel, Actions, Breakdown, Timeline, Salaries, Table
-src/components/ui/        shadcn-style components (card, badge, input), written in place
-server.ts                 Bun static server, HTTP Basic, refuses to start without a password
+src/lib/evals.ts          record and score types, axes, check families, scores API (TanStack Query), word diff
+src/pages/                overview, applications, insights, eval-overview, eval-review, eval-checks, eval-stories, eval-guide
+src/components/           app-sidebar, data-table, funnel, kpi, status, theme
+src/components/ui/        shadcn/ui components (components.json), generated then kept in place
+server.ts                 Bun static server + /api/scores, HTTP Basic, refuses to start without a password
 ```
 
-`src/data/applications.json` is **generated**, hence gitignored.
+`src/data/*.json` is **generated**, hence gitignored.
 
 ## Deployment (Railway)
 
@@ -245,8 +297,9 @@ Two guardrails follow, not to be removed:
 2. **`deploy-dashboard.sh` does not upload the repo.** `railway up` ships the
    current directory: run from the root, it would send the resume sources,
    interview prep and every personal note to the build servers. The script
-   rebuilds a minimal tree in a temporary directory: the dashboard sources, the
-   tracker, the profile and the Dockerfile (about 28 files, 250 KB).
+   rebuilds a minimal tree in a temporary directory: the dashboard sources
+   (without `demo/`), the tracker, the profile, the story catalogue, the traced
+   free texts and the Dockerfile.
 
 Verify online after deploying: 401 without credentials, 401 with a wrong
 password, **401 on the JS bundle too**, 200 with the right credentials.

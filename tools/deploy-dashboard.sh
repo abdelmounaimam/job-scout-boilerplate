@@ -5,10 +5,11 @@
 # `railway up` uploads the current directory. Run from the repo root, it would
 # ship everything to the build servers: the resume sources, the tracker's
 # notes, interview prep, salary targets, whatever personal documents live in
-# this repo. The build needs four things only: the dashboard sources, the
+# this repo. The build needs five things only: the dashboard sources, the
 # tracker that build-data.mjs reads through ../applications/, the profile it
-# reads for title, locale and currency, and the traced free texts of the
-# Evaluations tab (evals/records.jsonl). This script rebuilds just that tree.
+# reads for title, locale and currency, the traced free texts of the
+# Evaluations pages (evals/records.jsonl) and the story catalogue they cite
+# (profile/stories.md). This script rebuilds just that tree.
 #
 # ⚠️ The SCORES are not shipped from here: they live in the server's SQLite
 # database, on a volume mounted at /data (SCORES_DB=/data/scores.sqlite). A
@@ -65,16 +66,20 @@ mkdir -p "$UPLOAD/applications" "$UPLOAD/profile" "$UPLOAD/dashboard" "$UPLOAD/e
 cp "$ROOT/applications/applications.csv" "$UPLOAD/applications/"
 cp "$ROOT/profile/profile.mjs" "$UPLOAD/profile/"
 # Free texts to score, baked at build like the CSV. Only this file of evals/
-# ships (not the catalogue, not the scores mirror). Empty when none exists yet,
+# ships (not the scores mirror). Empty when none exists yet,
 # because the Dockerfile copies it unconditionally.
 if [ -f "$ROOT/evals/records.jsonl" ]; then cp "$ROOT/evals/records.jsonl" "$UPLOAD/evals/"; else : > "$UPLOAD/evals/records.jsonl"; fi
+# The story catalogue, read by the Stories page and the evidence tab of the
+# review queue. Same rule: always shipped, empty when it does not exist yet.
+if [ -f "$ROOT/profile/stories.md" ]; then cp "$ROOT/profile/stories.md" "$UPLOAD/profile/"; else : > "$UPLOAD/profile/stories.md"; fi
 cp "$ROOT/Dockerfile" "$UPLOAD/"
 
 # Dashboard sources, without build artefacts, dependencies, or generated data.
 ( cd "$ROOT/dashboard" && tar -cf - \
     --exclude=node_modules --exclude=dist --exclude=.git \
     --exclude='*.tsbuildinfo' --exclude=src/data/applications.json \
-    --exclude=src/data/records.json --exclude='scores.sqlite*' \
+    --exclude=src/data/records.json --exclude=src/data/stories.json \
+    --exclude=demo --exclude='scores.sqlite*' \
     . ) | ( cd "$UPLOAD/dashboard" && tar -xf - )
 
 echo "Upload surface: $(du -sh "$UPLOAD" | cut -f1), $(find "$UPLOAD" -type f | wc -l | tr -d ' ') files"

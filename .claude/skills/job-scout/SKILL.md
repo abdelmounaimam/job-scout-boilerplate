@@ -170,7 +170,7 @@ Non negotiable:
 
 - Statuses in the tracker; `WAITING FOR MY REPLY` in `notes` while a company waits for the candidate, `INTERVIEW OBTAINED` on an interview. The dashboard and the SessionStart status read these markers.
 - **Every write to the tracker, and every record added or completed in `evals/records.jsonl`, ends with a dashboard deploy** (if deployed): `node dashboard/scripts/build-data.mjs` then `tools/deploy-dashboard.sh --detach`, then check the deploy is SUCCESS **and** the URL answers 401 (Basic auth: it serves). A commit alone updates nothing online, and nothing signals it.
-- **Scores**: the candidate scores the free texts in the dashboard's Evaluations tab whenever they like. `tools/pull-scores.sh` mirrors them into `evals/scores.jsonl` (commit it). Turn every low-scored pattern into a written rule and every 5/5 or rewrite into an example (`evals/README.md`, « The loop »).
+- **Scores**: the candidate scores the free texts in the dashboard's Evaluations review queue whenever they like. `tools/pull-scores.sh` mirrors them into `evals/scores.jsonl` (commit it). Turn every low-scored pattern into a written rule and every 5/5 or rewrite into an example (`evals/README.md`, « The loop »).
 - Follow-ups per `RULES.followUps`. With `'never'`, nothing is ever chased; answering an incoming mail or moving an engaged process forward is not a chaser.
 - On a rejection: find the real reason and write it in the row. On an interview: `interview-prep/<company>/README.md`, one dated file per step, the company's published process, a check that nothing claimed is indefensible, and `node tools/glassdoor/glassdoor.mjs brief "<company>"` for real interview questions and salary percentiles.
 - **Update `progress.md` after every session**, commit.

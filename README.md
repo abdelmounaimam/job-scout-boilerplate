@@ -103,9 +103,11 @@ evals/
   records.jsonl        ← every free text the agent wrote: draft, final, stories, sourced claims, posting quotes
   check.mjs            ← deterministic checks, run before a text is shown
   README.md            ← record schema, the three-layer rubric, the loop
-dashboard/             ← React view of the tracker (read only) + Evaluations tab (scores to SQLite), HTTP Basic auth
+dashboard/             ← React view of the tracker (read only) + Evaluations pages (scores to SQLite), HTTP Basic auth
+  demo/                ← fictional tracker, texts and scores for `bun run demo` and the screenshots
 digests/               ← one CSV plus one analysis per scan
-docs/                  ← LESSONS.md (why each rule exists), METHOD.md (wide-sweep method, endpoints)
+docs/                  ← LESSONS.md (why each rule exists), METHOD.md (wide-sweep method, endpoints),
+                         DASHBOARD.md (the dashboard page by page), screenshots/
 interview-prep/        ← one folder per company in process
 .claude/
   settings.json        ← the SessionStart hook
@@ -143,12 +145,23 @@ Filters are deterministic and forms have recipes, but a paragraph the agent writ
 Three layers, in this order:
 
 1. **Deterministic checks first** (`node evals/check.mjs`, blocking, before you see the draft): every fact sourced in the catalogue, every number carried by a sourced claim, the posting's language, the field's length, no written form of your current salary, the real notice period, no dash as punctuation (all configurable in `WRITING` of the profile).
-2. **Your scores**, in the dashboard's Evaluations tab: truth, relevance, story choice, honesty, specificity, tone, from 1 to 5, a comment and optionally your own version. Low scores become written rules; 5/5 and rewrites become examples.
+2. **Your scores**, in the dashboard's review queue: truth, relevance, story choice, honesty, specificity, tone, from 1 to 5, a comment and optionally your own version. Low scores become written rules; 5/5 and rewrites become examples.
 3. **An LLM judge later**, calibrated against your scores axis by axis and trusted only where it agrees with you. **Never on truth**: only you know what you did.
 
 `tools/build-letter.sh` refuses to build a letter whose body is not traced and passing. Spec in [`evals/README.md`](./evals/README.md).
 
 ⚠️ **On Railway, the dashboard needs a volume.** Scores live in SQLite; a container's disk is wiped at every deploy, and the dashboard is redeployed after every application. Mount a volume at `/data` and set `SCORES_DB=/data/scores.sqlite` on the service, or every score vanishes at the next deploy. `tools/pull-scores.sh` mirrors them into the repo as a second copy.
+
+## The dashboard
+
+A private web page over the tracker and the free texts, served by Bun behind HTTP Basic auth, laptop and phone. **Job search** shows where the search stands (the funnel to interview, weekly pace, what waits for you, every application with its notes, which sources pay off, the salary bands against your floor). **Evaluations** is where you read every text the agent wrote for you next to its evidence and score it, with `j` / `k` to move through the queue.
+
+![Overview of the dashboard, on the fictional demo data](docs/screenshots/overview.png)
+
+| ![Review queue](docs/screenshots/review-evidence.png) | ![Insights](docs/screenshots/insights.png) |
+|---|---|
+
+Try it on fictional data before your own: `cd dashboard && bun install && bun run demo`. The page by page guide, the scoring workflow and the demo mode are in [`docs/DASHBOARD.md`](./docs/DASHBOARD.md); building and deploying it in [`dashboard/README.md`](./dashboard/README.md).
 
 ## The rules that make it work
 

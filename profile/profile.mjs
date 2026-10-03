@@ -11,7 +11,7 @@
 //
 // Read by: tools/linkedin/linkedin.mjs, tools/ats-watch/*.mjs,
 //          tools/cv-to-send.sh (via tools/setup/profile-get.mjs), the dashboard,
-//          both workflows, and every skill.
+//          evals/check.mjs, both workflows, and every skill.
 //
 // Validate after any edit:  node tools/setup/validate.mjs
 // ============================================================================
@@ -410,6 +410,37 @@ export const RULES = {
   // Every outbound message (mail, reply, chat, form free-text sent by mail) is
   // shown to the candidate as final text and waits for an explicit "send".
   outboundNeedsApproval: true,
+};
+
+// --- Free-text writing ------------------------------------------------------------
+// Every free-text output (an ATS field, a cover letter, an application mail, a
+// reply to a recruiter, a LinkedIn message) is traced in evals/records.jsonl and
+// must pass evals/check.mjs BEFORE it is shown to the candidate. This block holds
+// the candidate-specific inputs of those deterministic checks. The stories and
+// facts a text may use live in profile/stories.md. Spec: evals/README.md.
+
+export const WRITING = {
+  // Refuse a dash used as punctuation (em dash, en dash, or a hyphen between two
+  // spaces) in any free text. Hyphens inside words (full-stack) and list bullets
+  // at the start of a line pass. On by default: recruiters increasingly read the
+  // em dash as the signature of a generated text, and a text that reads
+  // generated gets skimmed. Set to false if the candidate writes with dashes.
+  noDashPunctuation: true,
+  // Words that announce a notice period, in every posting language, lowercase.
+  noticeWords: ['notice period', 'notice', 'kündigungsfrist'],
+  // Accepted wordings of CANDIDATE.noticePeriod, in every posting language. A
+  // text that mentions the notice without one of these (or the exact value of
+  // CANDIDATE.noticePeriod) fails: a stale notice period once got announced at a
+  // final round. Update it in the same edit as CANDIDATE.noticePeriod.
+  noticePhrasings: ['1 month', 'one month', '1 Monat', 'einen Monat'],
+  // ⚠️ The ONE place the current salary appears in the repo, and only as a
+  // BLOCKLIST: every written form of it (yearly gross with and without
+  // separators, the monthly figure, the base alone, the "41k" short form), as
+  // case-insensitive regular expressions (JS syntax, backslashes doubled). A text
+  // matching one fails. Agents never quote from this list. Empty means nothing
+  // protects the current salary in free text: the validator warns once
+  // CONFIGURED when RULES.neverDiscloseCurrentSalary is on.
+  forbiddenPatterns: ['\\b41[\\s.,]?000\\b', '\\b41\\s?k\\b'],
 };
 
 // --- Resume files ------------------------------------------------------------------

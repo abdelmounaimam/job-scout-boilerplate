@@ -250,3 +250,25 @@ console.log(`  ${withInterview.length} interview(s) obtained: ${withInterview.ma
 // REPLY" is missing from its note.
 const myCourt = applications.filter((c) => c.myCourt);
 console.log(`  ${myCourt.length} waiting for MY reply: ${myCourt.map((c) => c.company).join(", ") || "none"}`);
+
+/* Free-text outputs to score (evals/records.jsonl), baked at build time like
+ * the CSV. The file is written by the agent only; the SCORES live in the
+ * server's SQLite database (server.ts), never here. An unreadable line stops
+ * the build, for the same reason as the CSV guardrail above: a broken datum
+ * must break the build, not the page. A missing file is fine (no text yet). */
+const RECORDS = resolve(HERE, "../../evals/records.jsonl");
+const RECORDS_OUT = resolve(HERE, "../src/data/records.json");
+let records = [];
+if (existsSync(RECORDS)) {
+  const bad = [];
+  records = readFileSync(RECORDS, "utf8").split("\n").filter((l) => l.trim()).flatMap((l, i) => {
+    try { return [JSON.parse(l)]; } catch { bad.push(i + 1); return []; }
+  });
+  if (bad.length) {
+    console.error(`✗ evals/records.jsonl: unreadable line(s) ${bad.join(", ")}, build stopped.`);
+    process.exit(1);
+  }
+}
+writeFileSync(RECORDS_OUT, JSON.stringify(records) + "\n");
+const failing = records.filter((r) => r.checks && !r.checks.ok);
+console.log(`${records.length} free-text record(s) → src/data/records.json${failing.length ? `, ${failing.length} failing their checks` : ""}`);

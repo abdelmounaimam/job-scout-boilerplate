@@ -1,6 +1,6 @@
 # Answer bank: the questions every ATS asks
 
-Reusable answers, written once during setup (the `job-scout-init` interview fills the placeholders), so that a form takes minutes and not an hour. **Re-read and reuse at every application** instead of rebuilding the answers each time. Free-text answers specific to one posting live in [`cover-letters.md`](./cover-letters.md).
+Reusable answers, written once during setup (the `job-scout-init` interview fills the placeholders), so that a form takes minutes and not an hour. **Re-read and reuse at every application** instead of rebuilding the answers each time. Free-text answers specific to one posting are traced in [`../evals/records.jsonl`](../evals/records.jsonl), built only from [`../profile/stories.md`](../profile/stories.md), and checked before they are shown. A lesson drawn from a low score in the dashboard's Evaluations tab becomes a rule here, or in `CLAUDE.md`.
 
 ⚠️ **Rewrite, never paste blindly.** An answer that mentions the wrong company, or reuses a phrase written for another posting, is worse than a generic one.
 

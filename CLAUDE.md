@@ -118,7 +118,7 @@ The detailed recipes per platform are in [`applications/ats-playbook.md`](./appl
 - A form with no letter field, on a posting in `RULES.coverLetterLanguages`: merge the letter into the resume PDF with `tools/build-letter.sh`. A separate letter field: use its letter-only mode (`--alone`), never the merged PDF (the resume would go twice). A letter wherever there is a field for one: an empty optional letter got a rejection in seven hours.
 - **After every LaTeX build, render each page to an image and LOOK at it** (`pdftoppm -png -r 80 cv.pdf page`): no entry split across pages, no orphan bullets, no section split. The template protects experience entries only; the visual check is the guarantee. Delete the renders after.
 - **Never give the current salary** (`RULES.neverDiscloseCurrentSalary`). Answer with the expectation.
-- **Never invent a story**, a metric, a team, or a skill. After a checkbox group, **count** the ticks against the clicks: a neighbour box ticked by accident is a false claim sent to a recruiter.
+- **Never invent a story**, a metric, a team, or a skill: free text draws on `profile/stories.md` only, and is traced and checked before it is shown (section above). After a checkbox group, **count** the ticks against the clicks: a neighbour box ticked by accident is a false claim sent to a recruiter.
 - **Never tick an attestation on the candidate's behalf** (« I personally completed this application »), nor accept terms of service or a legal agreement. Captchas and third-party auth pages are the human's; hammering them hammers a personal account.
 - **LinkedIn Easy Apply is clicked by the human** (`RULES.easyApplyByHuman`). The LinkedIn client stays read only, and CDP-driving LinkedIn (injecting its cookie in a browser included) is off limits: the account at risk is the profile recruiters open after every application.
 - **Outside LinkedIn, `RULES.submittedBy` decides who presses Submit.** Either way: **sober filling**, one action per call, pauses, **never two attempts on the same widget**, **one single send click**. Aggressive retries got a submission flagged as spam. Space applications on the same ATS family within a session, and after a spam flag never re-click: wait days.
@@ -129,6 +129,19 @@ The detailed recipes per platform are in [`applications/ats-playbook.md`](./appl
 - ⚠️ **On any ATS where an account pre-exists, re-read the sections already marked complete.** A green badge means « filled », not « true »: an old profile would have sent a two-year-old resume and stale answers under an attestation of truthfulness.
 - **Log the row in `applications.csv` while filling**, with what was filled, and push any new recipe into `ats-playbook.md`. Applications made outside the pipeline (by the candidate, on their phone) get a row too, or the dedup and the story for the interview are lost.
 
+## ⚠️⚠️ Every free text is TRACED before it is shown
+
+An ATS field, a cover letter, an application mail, a reply to a recruiter, a LinkedIn message: **no free text is proposed to the candidate, let alone sent, without its line in `evals/records.jsonl`**, to the schema of [`evals/README.md`](./evals/README.md). Free text is the least controlled output of the pipeline and it spends the only cartridge at a company; tracing it is what makes it scorable, and the scores are what turn into rules.
+
+1. **Take the stories and facts from [`profile/stories.md`](./profile/stories.md), and only there.** A story or a fact missing from the catalogue is not used before it has been added, with its source in the canon, and validated by the candidate. Read its « Known don'ts » first.
+2. Write the draft, then fill `posting_quotes` (the lines of the posting it rests on, verbatim), `stories`, `claims` (every verifiable fact linked to its id) and `angle`.
+3. **`node evals/check.mjs <id>` must exit 0 BEFORE the draft is shown.** A failure is fixed, never bypassed. The checks read their candidate-specific inputs from `WRITING` in the profile (dash rule, notice wordings, the blocklist protecting the current salary).
+4. Once validated, fill `final` with the text that really went out (corrections included) and set `status: sent`. **The diff between `draft` and `final` is the richest evaluation signal of the loop: never overwrite `draft`.**
+5. Deploy the dashboard (as for the tracker) so the text shows in the Evaluations tab. `tools/pull-scores.sh` brings the scores back into `evals/scores.jsonl`, committed; run it before any session that revises the writing rules.
+6. A low score becomes a written rule (`applications/answers-bank.md`, this file, or the « Known don'ts » of the catalogue); a 5/5 or a rewrite becomes an example read before writing. An LLM judge may later score in the candidate's place, only on the axes where it agrees with the human scores, **never on truth**.
+
+`tools/build-letter.sh` enforces it for letters: it refuses a body that no record carries, or whose record fails its checks.
+
 ## Outbound messages
 
 - ⚠️⚠️ **No mail, reply, chat message or any outbound communication without the candidate's explicit approval** (`RULES.outboundNeedsApproval`). Show the **exact final text** and wait for a clear « send ». Describing what they want to say, or editing a draft, is not approval: it asks for a new draft.
@@ -138,9 +151,10 @@ The detailed recipes per platform are in [`applications/ats-playbook.md`](./appl
 ## Follow up and the dashboard
 
 - One row per application, statuses and markers in [`applications/README.md`](./applications/README.md). On a rejection, find the real reason and write it down. On an interview, open `interview-prep/<company>/` (see its README) and prepare with `tools/glassdoor/` for real questions and salary percentiles.
-- ⚠️⚠️ **Every write to `applications.csv` ends with a dashboard deploy** when `DASHBOARD.enabled`: `node dashboard/scripts/build-data.mjs` then `./tools/deploy-dashboard.sh --detach`. The data JSON is gitignored and rebuilt in the container, so a commit changes nothing online and nothing signals the omission: the page shows stale numbers without error.
+- ⚠️⚠️ **Every write to `applications.csv` (and every record added or completed in `evals/records.jsonl`) ends with a dashboard deploy** when `DASHBOARD.enabled`: `node dashboard/scripts/build-data.mjs` then `./tools/deploy-dashboard.sh --detach`. The data JSON is gitignored and rebuilt in the container, so a commit changes nothing online and nothing signals the omission: the page shows stale numbers without error.
 - **A deploy is good only with `SUCCESS` on the host AND the URL answering 401** (Basic auth, so it serves). **404 means it is down.** « The script ran » is not the check, and a detached deploy whose end nobody read proves nothing. Watch the host's deprecation notices: a config format with an end date breaks the deploy path on that date.
 - The dashboard **never writes** the CSV. It refuses to start without a password: never serve the search unauthenticated.
+- Its only write is the scores of the Evaluations tab, to SQLite at `SCORES_DB`. ⚠️ **Deployed, that path must be on a volume** (Railway: a volume mounted at `/data`, `SCORES_DB=/data/scores.sqlite`), and the volume is never detached: without it, every redeploy (one per tracker write) starts on an empty database, silently. The deploy log line « scores in … » says where they go.
 - **Update `progress.md` after every session**, and commit.
 
 ## Scripts and automation

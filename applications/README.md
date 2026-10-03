@@ -1,6 +1,8 @@
 # Applications: the tracker
 
-See also: [`ats-playbook.md`](./ats-playbook.md) (form recipes per platform), [`answers-bank.md`](./answers-bank.md) (reusable answers to the questions every ATS asks), [`cover-letters.md`](./cover-letters.md) (the texts actually sent, per posting) and [`ats-accounts.md`](./ats-accounts.md) (candidate accounts created, never passwords).
+See also: [`ats-playbook.md`](./ats-playbook.md) (form recipes per platform), [`answers-bank.md`](./answers-bank.md) (reusable answers to the questions every ATS asks), [`cover-letters.md`](./cover-letters.md) (per-posting notes for the interview) and [`ats-accounts.md`](./ats-accounts.md) (candidate accounts created, never passwords).
+
+⚠️ **Every free text of an application (ATS field, letter, mail) is written in [`../evals/records.jsonl`](../evals/records.jsonl)**, with its stories, its sourced claims and the draft kept apart from what was sent, then passes `../evals/check.mjs` before the candidate sees it. It is scored in the dashboard's Evaluations tab, which joins it to this tracker by company and date. See [`../evals/README.md`](../evals/README.md).
 
 ## `applications.csv`
 

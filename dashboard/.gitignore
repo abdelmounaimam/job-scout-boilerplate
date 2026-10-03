@@ -4,3 +4,8 @@ dist
 # Generated from applications/applications.csv at every build: never committed,
 # which is exactly why a commit of the CSV changes nothing online (see README).
 src/data/applications.json
+# Baked from ../evals/records.jsonl at every build, same reason.
+src/data/records.json
+# The scores database when the server runs locally. In production it lives on
+# a volume (SCORES_DB), never in the repo; tools/pull-scores.sh mirrors it.
+scores.sqlite*

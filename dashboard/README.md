@@ -1,9 +1,14 @@
 # Applications dashboard
 
-A read-only view of `applications/applications.csv`. **It changes nothing**: the
-CSV stays the source of truth, the dashboard is only its mirror. React, Tailwind,
-shadcn-style components written in place, Recharts, served by Bun behind HTTP
-Basic auth.
+A read-only view of `applications/applications.csv`. **It changes no
+application**: the CSV stays the source of truth, the dashboard is only its
+mirror. React, Tailwind, shadcn-style components written in place, Recharts,
+served by Bun behind HTTP Basic auth.
+
+⚠️ **One exception: the Evaluations tab writes SCORES.** It shows the free texts
+of `../evals/records.jsonl` (baked at build time like the CSV) and stores the
+candidate's scores in a SQLite database served by `server.ts` (`/api/scores`,
+same Basic auth). Spec and rubric in [`../evals/README.md`](../evals/README.md).
 
 Title, locale, currency, salary floor and chaser policy come from
 `profile/profile.mjs` (`DASHBOARD`, `TARGET`, `RULES.followUps`). No candidate
@@ -19,10 +24,28 @@ bun dev         # http://127.0.0.1:5180
 profile): as soon as a scan or an application changes it, the page reloads by
 itself. To regenerate by hand without a server: `bun run data`.
 
+## Scores of the free texts (Evaluations tab, `#evaluations`)
+
+| Piece | Role |
+|---|---|
+| `scripts/build-data.mjs` | bakes `evals/records.jsonl` into `src/data/records.json`; an unreadable line stops the build |
+| `server.ts`, `/api/scores` | `GET` every score, `POST` one (six axes from 1 to 5, a comment, a rewrite). Append-only table: scoring again keeps the history |
+| `SCORES_DB` | the SQLite path. ⚠️⚠️ **Deployed, it must be on a volume** (Railway: a volume mounted at `/data`, `SCORES_DB=/data/scores.sqlite`): without one, every redeploy (one per tracker write) starts on an empty database. With a volume attached and no variable, the server uses the volume's mount path; on Railway without either, it prints a warning at startup |
+| `../tools/pull-scores.sh` | mirrors the scores into `evals/scores.jsonl` for git and for the judge; the password is read from the host's variables, never written |
+
+The tab joins each text to its application by company name (whole leading
+words, never a substring) to show the outcome next to it, without copying it
+into the record. Locally, `bun dev` serves the page only (the tab says so and
+disables scoring). To try scoring:
+
+```bash
+bun run build && DASHBOARD_PASSWORD=<12+ characters> SCORES_DB=/tmp/scores.sqlite bun server.ts
+```
+
 ## ⚠️⚠️ The rule: every write to the tracker ends with a rebuild and a deploy
 
 A sent application, a rejection logged, a status moved to `interview` or
-`withdrawn`: each one is followed, in the same stride as the commit, by
+`withdrawn`, a record added or completed in `evals/records.jsonl`: each one is followed, in the same stride as the commit, by
 
 ```bash
 node dashboard/scripts/build-data.mjs     # or: cd dashboard && bun run data
@@ -82,6 +105,7 @@ doubtful datum shows as doubtful and never switches the page off.
 | Where the postings come from | Which source really feeds the pipeline |
 | Ranges shown | The announced bands, placed against the salary floor |
 | All applications | Filterable, searchable table, with a link to every posting |
+| **Evaluations tab** (`#evaluations`) | Every free text with its question, the posting lines it rests on, the angle, the stories and sourced facts, the failing checks, the agent's draft against what was sent, and the scoring form |
 
 ## Visualisation decisions, and why
 

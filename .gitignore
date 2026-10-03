@@ -33,5 +33,9 @@ node_modules/
 dist/
 *.tsbuildinfo
 dashboard/src/data/applications.json
+dashboard/src/data/records.json
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
 
 .DS_Store

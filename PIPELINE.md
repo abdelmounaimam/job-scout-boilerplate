@@ -97,14 +97,19 @@ flowchart TD
         CVS["tools/cv-to-send.sh<br/>→ RESUME.uploadFileName"]
         LET["tools/build-letter.sh<br/>resume + letter in one PDF"]
         STD["applications/<br/>answers-bank.md · ats-playbook.md<br/>ats-accounts.md · cover-letters.md"]
+        STO["profile/stories.md<br/>stories and facts, sourced"]
+        REC["evals/records.jsonl<br/>every free text traced<br/>+ evals/check.mjs, blocking"]
         FILL["agent-browser filling<br/>tools/browser/launch-chrome.sh"]
 
         EXP --> CV
         EXP --> PUB
         CV --> CVS
+        EXP --> STO --> REC
         CV --> LET
+        REC -->|"body traced and checked"| LET
         CVS --> FILL
         LET --> FILL
+        REC --> FILL
         STD --> FILL
     end
 
@@ -120,11 +125,18 @@ flowchart TD
         DEPLOY["tools/deploy-dashboard.sh"]
         CHECK{"SUCCESS + URL answers 401 ?"}
         DASH["Dashboard<br/>funnel · pace · sources · bands<br/>waiting for my reply"]
+        EVAL["Evaluations tab<br/>scores 1 to 5 on 6 axes → SQLite (volume /data)"]
+        PULL["pull-scores.sh → evals/scores.jsonl"]
+        RULES["low scores → written rules<br/>5/5 and rewrites → examples"]
 
         VERIF --> CSV --> BUILD --> DEPLOY --> CHECK
         CHECK -->|yes| DASH
+        CHECK -->|yes| EVAL --> PULL --> RULES
         CHECK -->|"no / 404"| DEPLOY
     end
+
+    REC --> BUILD
+    RULES -.next text.-> STO
 
     FILL --> VERIF
 
@@ -141,11 +153,12 @@ flowchart TD
 - **Discovery loop**: the web and bootstrap workflows find new names and propose them for `candidates.json`. `discover.mjs --promote` moves the ones with a live board into `watchlist.json`, which the poller then watches for good. Each pass permanently widens what the poller covers, and a slug already tried in vain is not probed again, so passes get shorter.
 - **Two guards**: `doctor` skips the LinkedIn scan when an endpoint is dead, because an empty digest looks like a quiet week. The dump is written to a `.partial` file and replaces the old one only on success.
 - **Dashboard deploy**: good only with `SUCCESS` on the host and the URL answering `401` (Basic auth, so it serves). A `404` means it is down.
+- **Evaluation loop**: every free text is traced in `evals/records.jsonl` and checked by `evals/check.mjs` before the candidate sees it, then scored in the Evaluations tab. Scores come back into the repo through `pull-scores.sh` and turn into rules. The scores database lives on a volume, or each deploy wipes it. Spec in [`evals/README.md`](./evals/README.md).
 - **Dotted arrows**: orchestration or side use, not data flow.
 
 ## 2. A pass, step by step
 
-What happens when the candidate says « run the pipeline » or « look for offers » in a session. The two orange nodes are the candidate's: choosing what to send, and clicking LinkedIn Easy Apply.
+What happens when the candidate says « run the pipeline » or « look for offers » in a session. The orange nodes are the candidate's: choosing what to send, validating or correcting the free texts, clicking LinkedIn Easy Apply, and scoring the texts afterwards.
 
 ```mermaid
 flowchart TD
@@ -206,6 +219,8 @@ flowchart TD
     subgraph P5["5. Apply, one posting at a time"]
         direction TB
         LIVE{"posting still live on its ATS?<br/>no application at this company?"}
+        TXT["free texts: stories from profile/stories.md<br/>a record in evals/records.jsonl<br/>check.mjs at 0 before showing them"]
+        VAL{"THE CANDIDATE validates<br/>or corrects the texts"}
         CVSTEP["resume in the posting's language<br/>cv-to-send.sh → RESUME.uploadFileName<br/>build-letter.sh when no letter field"]
         ACC["candidate account if the ATS demands one<br/>(an account is not an application)"]
         FILL["agent-browser<br/>cookies first · map ALL fields<br/>checkboxes and selects · uploads · text LAST"]
@@ -214,7 +229,7 @@ flowchart TD
         SUBMIT["one single send click<br/>(RULES.submittedBy)"]
         YOU["THE CANDIDATE clicks"]
         MAIL["read the response body<br/>then the mailbox is the oracle"]
-        LIVE -->|yes| CVSTEP --> ACC --> FILL --> REREAD --> EA
+        LIVE -->|yes| TXT --> VAL --> CVSTEP --> ACC --> FILL --> REREAD --> EA
         EA -->|no| SUBMIT --> MAIL
         EA -->|yes| YOU --> MAIL
     end
@@ -224,7 +239,7 @@ flowchart TD
 
     subgraph P6["6. Track"]
         direction TB
-        CSV["row in applications.csv<br/>cv_version, what was filled<br/>(logged even if it seemed to fail)"]
+        CSV["row in applications.csv<br/>cv_version, what was filled<br/>(logged even if it seemed to fail)<br/>+ final and status sent in records.jsonl"]
         DEP["build-data.mjs then deploy-dashboard.sh"]
         OK{"host SUCCESS<br/>and URL answers 401?"}
         PROG["progress.md<br/>+ new recipe in ats-playbook.md<br/>commit + push"]
@@ -236,9 +251,10 @@ flowchart TD
     MAIL --> CSV
 
     PROG --> LATER["Later: inbox review in context<br/>rejection → real reason written · interview → interview-prep/company<br/>chasers only if RULES.followUps allows"]
+    PROG --> SCORE["Whenever: the Evaluations tab<br/>the candidate scores, pull-scores.sh, rules updated"]
 
     classDef human stroke:#c7771f,stroke-width:3px
-    class PICK,YOU human
+    class PICK,YOU,VAL,SCORE human
 ```
 
 ## Cadence
@@ -251,3 +267,4 @@ flowchart TD
 | workflow `job-scout-web` | weekly, or on a targeted need | tokens |
 | workflow `job-scout-bootstrap` | at setup, then every 2 to 3 months ([`docs/METHOD.md`](./docs/METHOD.md)) | tokens, the most expensive |
 | `glassdoor.mjs brief` | before an interview | a browser must run |
+| Scoring the free texts (Evaluations tab), then `tools/pull-scores.sh` | whenever the candidate likes; pull before revising the writing rules | minutes |

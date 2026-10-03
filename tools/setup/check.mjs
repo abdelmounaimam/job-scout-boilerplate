@@ -121,6 +121,21 @@ async function main() {
     say(last ? `Latest digest: ${last} (${daysSince(new Date(`${last}T12:00:00`))} day(s) ago).` : 'No digest yet: no scan has run.');
   }
 
+  // --- free texts ----------------------------------------------------------------------
+  // evals/records.jsonl: drafts still without their final, and records failing
+  // their checks, are loose ends of the evaluation loop (evals/README.md).
+  const recordsFile = join(ROOT, 'evals', 'records.jsonl');
+  if (existsSync(recordsFile)) {
+    const recs = readFileSync(recordsFile, 'utf8').split('\n').filter((l) => l.trim())
+      .flatMap((l) => { try { return [JSON.parse(l)]; } catch { return []; } });
+    if (recs.length) {
+      const drafts = recs.filter((r) => r.status === 'draft').length;
+      const failing = recs.filter((r) => r.checks && r.checks.ok === false).length;
+      say(`Free texts traced: ${recs.length}${drafts ? `, ${drafts} still draft (fill \`final\` once sent)` : ''}${failing ? `, ${failing} failing their checks` : ''}.`);
+    }
+  }
+  say('RULE: every free text is traced in evals/records.jsonl and passes evals/check.mjs before it is shown.');
+
   // --- LinkedIn session ------------------------------------------------------------
   if (P.LINKEDIN?.enabled) {
     const sf = join(ROOT, 'tools', 'linkedin', '.session.json');

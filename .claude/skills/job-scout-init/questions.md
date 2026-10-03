@@ -220,3 +220,20 @@ Then free text: cover-letter languages, confirm the upload name `LASTNAME_FIRSTN
       { "label": "Scheduled", "description": "Installed only after a first manual run worked." } ] }
 ] }
 ```
+
+## Round 12: free-text writing
+
+```json
+{ "questions": [
+  { "header": "Dashes", "question": "Should the checks refuse a dash used as punctuation (—, –, or a spaced hyphen) in your application texts?", "multiSelect": false,
+    "options": [
+      { "label": "Yes, refuse them (Recommended)", "description": "Recruiters increasingly read the em dash as a sign of generated text. Hyphens inside words still pass." },
+      { "label": "No, I write with dashes", "description": "The check is turned off; every other check stays." } ] },
+  { "header": "Scoring", "question": "Where will you score the texts the agent writes for you?", "multiSelect": false,
+    "options": [
+      { "label": "In the dashboard (Recommended)", "description": "Evaluations tab, six axes from 1 to 5, a comment, your own version. Needs the server running (deployed, or bun server.ts locally)." },
+      { "label": "In the conversation only", "description": "You correct the drafts; the draft/final diff in evals/records.jsonl is still recorded and still teaches." } ] }
+] }
+```
+
+Then free text: the notice period as each posting language writes it, and every written form of the current compensation (turned into `WRITING.forbiddenPatterns`, tested before writing).

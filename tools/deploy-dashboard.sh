@@ -5,9 +5,15 @@
 # `railway up` uploads the current directory. Run from the repo root, it would
 # ship everything to the build servers: the resume sources, the tracker's
 # notes, interview prep, salary targets, whatever personal documents live in
-# this repo. The build needs three things only: the dashboard sources, the
-# tracker that build-data.mjs reads through ../applications/, and the profile
-# it reads for title, locale and currency. This script rebuilds just that tree.
+# this repo. The build needs four things only: the dashboard sources, the
+# tracker that build-data.mjs reads through ../applications/, the profile it
+# reads for title, locale and currency, and the traced free texts of the
+# Evaluations tab (evals/records.jsonl). This script rebuilds just that tree.
+#
+# ⚠️ The SCORES are not shipped from here: they live in the server's SQLite
+# database, on a volume mounted at /data (SCORES_DB=/data/scores.sqlite). A
+# deploy without that volume starts on an empty database. tools/pull-scores.sh
+# mirrors them back into the repo.
 #
 # ⚠️ The temporary directory is linked to NO Railway project. Without explicit
 # identifiers, `railway up` offers to create a new project, and you end up with
@@ -55,15 +61,20 @@ done
 UPLOAD="$(mktemp -d)"
 trap 'rm -rf "$UPLOAD"' EXIT
 
-mkdir -p "$UPLOAD/applications" "$UPLOAD/profile" "$UPLOAD/dashboard"
+mkdir -p "$UPLOAD/applications" "$UPLOAD/profile" "$UPLOAD/dashboard" "$UPLOAD/evals"
 cp "$ROOT/applications/applications.csv" "$UPLOAD/applications/"
 cp "$ROOT/profile/profile.mjs" "$UPLOAD/profile/"
+# Free texts to score, baked at build like the CSV. Only this file of evals/
+# ships (not the catalogue, not the scores mirror). Empty when none exists yet,
+# because the Dockerfile copies it unconditionally.
+if [ -f "$ROOT/evals/records.jsonl" ]; then cp "$ROOT/evals/records.jsonl" "$UPLOAD/evals/"; else : > "$UPLOAD/evals/records.jsonl"; fi
 cp "$ROOT/Dockerfile" "$UPLOAD/"
 
 # Dashboard sources, without build artefacts, dependencies, or generated data.
 ( cd "$ROOT/dashboard" && tar -cf - \
     --exclude=node_modules --exclude=dist --exclude=.git \
     --exclude='*.tsbuildinfo' --exclude=src/data/applications.json \
+    --exclude=src/data/records.json --exclude='scores.sqlite*' \
     . ) | ( cd "$UPLOAD/dashboard" && tar -xf - )
 
 echo "Upload surface: $(du -sh "$UPLOAD" | cut -f1), $(find "$UPLOAD" -type f | wc -l | tr -d ' ') files"
@@ -81,3 +92,4 @@ echo
 echo "Now verify, the script running is not proof:"
 echo "  1. the latest deployment of $RAILWAY_SERVICE_NAME is SUCCESS (railway status, or the Railway UI)"
 echo "  2. curl -s -o /dev/null -w '%{http_code}' <dashboard URL>     → 401 = serving behind auth, 404 = dead"
+echo "  3. the deploy log says « scores in /data/scores.sqlite » (a volume), never ./scores.sqlite"

@@ -13,7 +13,7 @@
 // floor or a work authorisation is right. Only the candidate can, which is why
 // the init interview asks instead of inferring.
 
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, isAbsolute } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -228,6 +228,44 @@ export async function validate() {
     strList(R.coverLetterLanguages, 'RULES.coverLetterLanguages', { min: 0 });
     if (R.outboundNeedsApproval === false) warn('RULES.outboundNeedsApproval is false: the agent may send mail without showing it first');
     if (R.easyApplyByHuman === false) warn('RULES.easyApplyByHuman is false: the LinkedIn client is read only and stays so, Easy Apply will still need a human');
+  }
+
+  // --- WRITING (inputs of evals/check.mjs)
+  const W = block('WRITING');
+  if (W) {
+    if (typeof W.noDashPunctuation !== 'boolean') err('WRITING.noDashPunctuation must be a boolean');
+    strList(W.noticeWords, 'WRITING.noticeWords');
+    // Matched case-insensitively by evals/check.mjs, so no lowercase rule here
+    // (German nouns keep their capital).
+    for (const k of ['noticePhrasings', 'forbiddenPatterns']) {
+      if (!Array.isArray(W[k])) { err(`WRITING.${k} must be an array of strings`); continue; }
+      W[k].forEach((x, i) => { if (!isStr(x)) err(`WRITING.${k}[${i}] must be a non-empty string`); });
+    }
+    if (Array.isArray(W.forbiddenPatterns)) {
+      for (const p of W.forbiddenPatterns) {
+        try { new RegExp(p, 'i'); } catch (e) { err(`WRITING.forbiddenPatterns: invalid regular expression ${p}: ${e.message}`); }
+      }
+      if (CONFIGURED && R?.neverDiscloseCurrentSalary && !W.forbiddenPatterns.length) {
+        warn('WRITING.forbiddenPatterns is empty: nothing stops the current salary from appearing in a free text');
+      }
+    }
+    // The notice wordings must agree with the notice period itself: a profile
+    // updated in one place only is how a stale notice reaches an interview.
+    if (C && isStr(C.noticePeriod) && Array.isArray(W.noticePhrasings)) {
+      const lower = W.noticePhrasings.map((x) => String(x).toLowerCase());
+      if (W.noticePhrasings.length && !lower.includes(C.noticePeriod.toLowerCase())) {
+        warn(`WRITING.noticePhrasings does not list CANDIDATE.noticePeriod ('${C.noticePeriod}'): update both in the same edit`);
+      }
+    }
+  }
+  const STORIES = join(ROOT, 'profile', 'stories.md');
+  if (!existsSync(STORIES)) err('profile/stories.md is missing: evals/check.mjs reads the story and fact ids from it');
+  else {
+    const ids = [...readFileSync(STORIES, 'utf8').matchAll(/\[((?:ST|FACT)-[A-Z0-9-]+)\]/g)].map((m) => m[1]);
+    const dupes = ids.filter((x, i) => ids.indexOf(x) !== i);
+    if (dupes.length) err(`profile/stories.md: id(s) used twice: ${[...new Set(dupes)].join(', ')}`);
+    if (!ids.some((x) => x.startsWith('ST-'))) warn('profile/stories.md holds no story id: every free text will fail its checks');
+    if (CONFIGURED && /fictional candidate/i.test(readFileSync(STORIES, 'utf8'))) err('profile/stories.md still holds the example rows (run the story catalogue step of job-scout-init)');
   }
 
   // --- RESUME

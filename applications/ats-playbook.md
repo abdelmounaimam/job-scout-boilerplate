@@ -3,7 +3,7 @@
 > Recipes verified in real conditions, on real applications. This file describes **platforms, not a person**. Update it every time a new platform or a new trap is met: a lesson left in a digest gets paid for twice.
 >
 > Prerequisite: Chrome launched with `tools/browser/launch-chrome.sh` (CDP 9222, dedicated profile), the agent attaches with `agent-browser --cdp 9222`.
-> Standard answers: [`answers-bank.md`](./answers-bank.md). Texts per posting: [`cover-letters.md`](./cover-letters.md). Accounts: [`ats-accounts.md`](./ats-accounts.md).
+> Standard answers: [`answers-bank.md`](./answers-bank.md). Free texts: traced in [`../evals/records.jsonl`](../evals/records.jsonl), from [`../profile/stories.md`](../profile/stories.md); per-posting notes in [`cover-letters.md`](./cover-letters.md). Accounts: [`ats-accounts.md`](./ats-accounts.md).
 
 ## Contents
 
@@ -33,6 +33,7 @@
 6. **Re-read every required field in the DOM** (`value`, `checked`, `files.length` or the platform's upload proof, hidden fields for autocompletes) right before sending. The visual is not proof.
 7. **One single send click.** Then read the network response **body**, then the page, then the mailbox. Never re-click in a loop.
 8. **Log the row in `applications.csv` while filling**, with what was filled, and log it even if the send seemed to fail.
+8b. ⚠️ **Every free-text field is traced in `evals/records.jsonl` and passes `evals/check.mjs` BEFORE it is typed.** The text pasted into the form is the record's; note the field's character `limit` in the record (the length check depends on it, and many fields cut silently). After the send, `final` gets what really went out, corrections included.
 9. **New platform or new trap: add the recipe here.**
 
 ---

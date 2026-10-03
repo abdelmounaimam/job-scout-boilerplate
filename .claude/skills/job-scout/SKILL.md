@@ -36,12 +36,15 @@ The full diagram, with the step-by-step of one pass and the two human decision p
 | **The single tuning surface**: identity, filters, geography, floor, rules, sources | [`profile/profile.mjs`](../../../profile/profile.mjs) |
 | Companies closed after reading, with reason and date | [`profile/ruled-out.mjs`](../../../profile/ruled-out.mjs) |
 | Experience canon (source of truth for every resume) | [`profile/experiences.md`](../../../profile/experiences.md) |
+| **Story and fact catalogue**: the only material a free text may use | [`profile/stories.md`](../../../profile/stories.md) |
+| **Free-text evaluation**: record schema, rubric, the loop | [`evals/README.md`](../../../evals/README.md) |
 | Diagram of the pipeline and of one pass | [`PIPELINE.md`](../../../PIPELINE.md) |
 | Why each rule exists: the incident catalogue | [`docs/LESSONS.md`](../../../docs/LESSONS.md) |
 | Wide-sweep method, endpoints, non-obvious slugs | [`docs/METHOD.md`](../../../docs/METHOD.md) |
 | **Form-filling recipes per ATS** | [`applications/ats-playbook.md`](../../../applications/ats-playbook.md) |
 | Reusable answers to recurring ATS questions | [`applications/answers-bank.md`](../../../applications/answers-bank.md) |
-| Letters and free-text answers already written | [`applications/cover-letters.md`](../../../applications/cover-letters.md) |
+| Every free text written, draft and final (source of truth) | `evals/records.jsonl` |
+| Per-posting notes for the interview (which texts went out, facts of the posting) | [`applications/cover-letters.md`](../../../applications/cover-letters.md) |
 | Candidate accounts created on ATS tenants | [`applications/ats-accounts.md`](../../../applications/ats-accounts.md) |
 | Application tracker (source of truth) | [`applications/applications.csv`](../../../applications/applications.csv) |
 | LinkedIn client: commands, endpoints, traps | [`tools/linkedin/README.md`](../../../tools/linkedin/README.md) |
@@ -160,12 +163,14 @@ Non negotiable:
 7. **The verdict lives in the response body and the mailbox, never in the page.** An HTTP 200 can carry a failure, an unchanged URL can hide a success. Log a tracker row **even when you believe it failed**, then let the mailbox decide.
 8. An account created is not an application sent. A "verify your email" mail proves it did NOT go out.
 9. Never invent a story, never give the current salary, never tick an attestation on the candidate's behalf.
-10. Log the row in `applications/applications.csv` (what was filled, `cv_version`), push any new recipe into `ats-playbook.md`.
+10. ⚠️ **Every free text (ATS field, letter, mail, recruiter reply, LinkedIn message) is traced in `evals/records.jsonl` and passes `node evals/check.mjs <id>` BEFORE it is shown.** Stories and facts from `profile/stories.md` only; note the field's character `limit` in the record; after validation `final` gets what really went out and `draft` is never overwritten. `build-letter.sh` refuses an untraced body. Detail in `CLAUDE.md` and `evals/README.md`.
+11. Log the row in `applications/applications.csv` (what was filled, `cv_version`), push any new recipe into `ats-playbook.md`.
 
 ## Phase 5: FOLLOW UP
 
 - Statuses in the tracker; `WAITING FOR MY REPLY` in `notes` while a company waits for the candidate, `INTERVIEW OBTAINED` on an interview. The dashboard and the SessionStart status read these markers.
-- **Every write to the tracker ends with a dashboard deploy** (if deployed): `node dashboard/scripts/build-data.mjs` then `tools/deploy-dashboard.sh --detach`, then check the deploy is SUCCESS **and** the URL answers 401 (Basic auth: it serves). A commit alone updates nothing online, and nothing signals it.
+- **Every write to the tracker, and every record added or completed in `evals/records.jsonl`, ends with a dashboard deploy** (if deployed): `node dashboard/scripts/build-data.mjs` then `tools/deploy-dashboard.sh --detach`, then check the deploy is SUCCESS **and** the URL answers 401 (Basic auth: it serves). A commit alone updates nothing online, and nothing signals it.
+- **Scores**: the candidate scores the free texts in the dashboard's Evaluations tab whenever they like. `tools/pull-scores.sh` mirrors them into `evals/scores.jsonl` (commit it). Turn every low-scored pattern into a written rule and every 5/5 or rewrite into an example (`evals/README.md`, « The loop »).
 - Follow-ups per `RULES.followUps`. With `'never'`, nothing is ever chased; answering an incoming mail or moving an engaged process forward is not a chaser.
 - On a rejection: find the real reason and write it in the row. On an interview: `interview-prep/<company>/README.md`, one dated file per step, the company's published process, a check that nothing claimed is indefensible, and `node tools/glassdoor/glassdoor.mjs brief "<company>"` for real interview questions and salary percentiles.
 - **Update `progress.md` after every session**, commit.

@@ -42,6 +42,10 @@ The sidebar holds both halves. On a laptop it collapses to icons (the button lef
 
 **Answers: what exactly did I send, where, and what happened?**
 
+![Applications table: search, status and source filters, sortable columns](screenshots/applications-table.png)
+
+Click any row to open its side panel, with the full notes and every free text written for that application:
+
 ![Applications, with the side panel open](screenshots/applications.png)
 
 Every tracker row, newest first, 20 per page. Search matches the company, the role and the notes. **Status** and **Source** filter on several values at once; **Reset** clears them. **Columns** hides or shows columns on a laptop; on a phone the role moves under the company name.

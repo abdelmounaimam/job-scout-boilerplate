@@ -38,7 +38,7 @@ export function EvalOverviewPage() {
     .filter((c) => c.total);
 
   // Score against outcome: weak signal (small n, unexplained rejections), shown as a hint, never as a grade.
-  const outcomes = ["interview", "rejected", "applied"].map((st) => {
+  const outcomes = ["offer", "interview", "rejected", "applied"].map((st) => {
     const rs = RECORDS.filter((r) => applicationOf(r)?.status === st);
     return { st, n: rs.length, avg: mean(rs.map((r) => latest.get(r.id)).filter(Boolean).flatMap((s) => Object.values(s!.axes))) };
   });

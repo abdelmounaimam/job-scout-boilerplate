@@ -1,5 +1,5 @@
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import { ArrowUpRight, BellRing, CalendarCheck2, Clock3, Hourglass, PencilLine, Send, TrendingUp } from "lucide-react";
+import { ArrowUpRight, BellRing, CalendarCheck2, Clock3, Hourglass, PencilLine, Send, TrendingUp, Trophy } from "lucide-react";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,7 @@ export function OverviewPage() {
   const weeks = perWeek();
   const thisWeek = weeks.at(-1);
   const maxCount = Math.max(...counts.map((c) => c.n), 1);
+  const offers = APPLICATIONS.filter((c) => c.status === "offer");
 
   // "Waiting on you" is not a chaser: the company answered and waits for you.
   // Chasers only show when the profile sets RULES.followUps to a number of
@@ -71,7 +72,14 @@ export function OverviewPage() {
         <p className="text-muted-foreground text-sm">Where the search stands, read from applications.csv.</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-3 2xl:grid-cols-6">
+        <Kpi
+          label="Offers"
+          value={offers.length}
+          hint={offers.length ? offers.map((c) => c.company).join(", ") : "None yet"}
+          icon={Trophy}
+          tone={offers.length ? "var(--st-good)" : undefined}
+        />
         <Kpi label="Applications sent" value={rep.sent} hint={`${APPLICATIONS.length} tracker rows`} icon={Send} />
         <Kpi label="Waiting for an answer" value={n("applied")} hint="No reply so far" icon={Hourglass} tone="var(--st-pending)" />
         <Kpi label="Interviews" value={n("interview")} hint={n("interview") ? "Process under way" : "None right now"} icon={CalendarCheck2} tone={n("interview") ? "var(--st-good)" : undefined} />
@@ -82,7 +90,6 @@ export function OverviewPage() {
           hint={n("to_finish") ? "Prepared, never sent" : "Nothing pending"}
           icon={PencilLine}
           tone={n("to_finish") ? "var(--st-attention)" : undefined}
-          className="col-span-2 lg:col-span-1"
         />
       </div>
 

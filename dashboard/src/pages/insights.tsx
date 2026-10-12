@@ -17,7 +17,7 @@ function bySource() {
     const e = m.get(c.sourceFamily) ?? { n: 0, interviews: 0, sent: 0 };
     e.n++;
     if (c.sent) e.sent++;
-    if (c.interviewObtained || c.status === "interview") e.interviews++;
+    if (c.interviewObtained || c.status === "interview" || c.status === "offer") e.interviews++;
     m.set(c.sourceFamily, e);
   }
   return [...m.entries()].map(([source, v]) => ({ source, ...v })).sort((a, b) => b.n - a.n);

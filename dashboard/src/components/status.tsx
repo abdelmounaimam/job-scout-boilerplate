@@ -1,4 +1,4 @@
-import { Ban, CalendarCheck2, CircleHelp, Clock3, DoorClosed, PencilLine, XCircle, type LucideIcon } from "lucide-react";
+import { Ban, CalendarCheck2, CircleHelp, Clock3, DoorClosed, PencilLine, Trophy, XCircle, type LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { statusOf, type Status } from "@/lib/metrics";
 import { cn } from "@/lib/utils";
@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 /** Every status has an icon AND a label: colour never carries meaning alone
  *  (the status hues fail the dataviz validator as a categorical palette). */
 export const STATUS_ICON: Record<Status, LucideIcon> = {
+  offer: Trophy,
   applied: Clock3,
   interview: CalendarCheck2,
   to_finish: PencilLine,

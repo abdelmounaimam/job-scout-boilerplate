@@ -33,6 +33,7 @@
 | nominative acknowledgment of receipt | the application **went out** | `applied` |
 | explicit rejection | end of process | `rejected` |
 | slot proposed or confirmed | interview | `interview` |
+| written offer | offer | `offer` |
 | no mail at all | **nothing** | unchanged |
 
 - An application is `applied` **only if a mail proves it**. Review 24 to 48 h after each batch.

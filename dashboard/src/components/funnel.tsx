@@ -23,6 +23,7 @@ export function Funnel() {
   const sent = root.children.find((e) => e.key === "sent")!;
   const interviews = sent.children.find((e) => e.key === "interview")!;
   const rate = sent.n ? (interviews.n / sent.n) * 100 : 0;
+  const offers = interviews.children.find((e) => e.key === "offer")?.n ?? 0;
 
   return (
     <div>
@@ -33,7 +34,7 @@ export function Funnel() {
           viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
           className="h-auto w-full min-w-[880px]"
           role="img"
-          aria-label={`Application funnel: ${root.n} prepared, ${sent.n} sent, ${interviews.n} interviews obtained`}
+          aria-label={`Application funnel: ${root.n} prepared, ${sent.n} sent, ${interviews.n} interviews obtained, ${offers} offers`}
         >
           {ribbons.map((r) => (
             <path key={r.key} d={r.d} fill={r.color} className="[fill-opacity:0.16] transition-[fill-opacity] duration-150 hover:[fill-opacity:0.38]">
@@ -65,7 +66,7 @@ export function Funnel() {
       </div>
       <p className="text-muted-foreground mt-3 text-xs leading-relaxed text-pretty">
         <strong className="text-foreground">
-          {interviews.n} interview{interviews.n === 1 ? "" : "s"} out of {sent.n} sent, {rate.toFixed(1)}%.
+          {interviews.n} interview{interviews.n === 1 ? "" : "s"} out of {sent.n} sent, {rate.toFixed(1)}%{offers ? `, and ${offers} offer${offers > 1 ? "s" : ""}` : ""}.
         </strong>{" "}
         Furthest stage reached, not the latest status: an interview stays counted even if the process stopped after it. A silence
         beyond {SILENCE_DAYS} days counts as a rejection that was never written.

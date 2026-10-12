@@ -176,7 +176,7 @@ const MY_COURT_MARKER = /WAITING FOR MY REPLY/i;
 
 /** Statuses the UI knows how to show. Must stay aligned with `Status` and
  *  `STATUSES` in src/lib/metrics.ts. */
-const KNOWN_STATUSES = ["applied", "interview", "rejected", "closed", "to_finish", "withdrawn"];
+const KNOWN_STATUSES = ["offer", "applied", "interview", "rejected", "closed", "to_finish", "withdrawn"];
 const REQUIRED_COLUMNS = ["date_applied", "company", "role", "source", "link", "remote", "salary_shown", "cv_version", "status", "notes"];
 
 if (!existsSync(CSV)) {
@@ -281,6 +281,8 @@ console.log(`  ${sent.length} really sent, ${applications.length - sent.length} 
 // interview obtained does not show up here, "INTERVIEW OBTAINED" is missing
 // from its note.
 console.log(`  ${withInterview.length} interview(s) obtained: ${withInterview.map((c) => c.company).join(", ") || "none"}`);
+const offers = applications.filter((c) => c.status === "offer");
+console.log(`  ${offers.length} offer(s) received: ${offers.map((c) => c.company).join(", ") || "none"}`);
 // Same guardrail: if a ball in my court does not show up here, "WAITING FOR MY
 // REPLY" is missing from its note.
 const myCourt = applications.filter((c) => c.myCourt);

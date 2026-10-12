@@ -23,7 +23,7 @@ export type Application = {
   myCourt: boolean;
 };
 
-export type Status = "applied" | "interview" | "rejected" | "closed" | "to_finish" | "withdrawn";
+export type Status = "offer" | "applied" | "interview" | "rejected" | "closed" | "to_finish" | "withdrawn";
 
 export type Config = {
   title: string;
@@ -51,8 +51,14 @@ export const GENERATED_AT = data.generatedAt as string;
  *  `withdrawn` exists because its absence forced a lie: an application
  *  prepared then dropped by choice stayed in `to_finish`, so it showed as
  *  pending work in the Actions panel. It separates three different things:
- *  "not sent yet", "sent then rejected", and "decided not to send". */
+ *  "not sent yet", "sent then rejected", and "decided not to send".
+ *
+ *  `offer` exists for the same reason: without it, a written offer stayed in
+ *  `interview`, shown as a process still under way, and the most important
+ *  outcome of the whole search appeared nowhere. Not to be confused with
+ *  `closed`, which means the posting was taken down. */
 export const STATUSES: Record<Status, { label: string; color: string; icon: string; help: string }> = {
+  offer: { label: "Offer", color: "var(--st-good)", icon: "★", help: "Written offer received" },
   applied: { label: "Waiting", color: "var(--st-pending)", icon: "●", help: "Sent, no answer yet" },
   interview: { label: "Interview", color: "var(--st-good)", icon: "▲", help: "Process engaged" },
   to_finish: { label: "To finish", color: "var(--st-attention)", icon: "◆", help: "Form ready, not sent" },
@@ -61,7 +67,7 @@ export const STATUSES: Record<Status, { label: string; color: string; icon: stri
   withdrawn: { label: "Withdrawn", color: "var(--st-neutral)", icon: "⊘", help: "Dropped by choice, never sent" },
 };
 
-export const STATUS_ORDER: Status[] = ["interview", "applied", "to_finish", "closed", "rejected", "withdrawn"];
+export const STATUS_ORDER: Status[] = ["offer", "interview", "applied", "to_finish", "closed", "rejected", "withdrawn"];
 
 /** Returns a status descriptor, with a fallback for an unknown status.
  *
@@ -126,7 +132,7 @@ export function countByStatus(c: Application[]) {
  *  build time, read by both. */
 export function responseRate(c: Application[]) {
   const sent = c.filter((x) => x.sent);
-  const answered = sent.filter((x) => x.status === "rejected" || x.status === "interview" || x.status === "closed");
+  const answered = sent.filter((x) => x.status === "rejected" || x.status === "interview" || x.status === "offer" || x.status === "closed");
   return {
     sent: sent.length,
     answered: answered.length,
@@ -152,7 +158,7 @@ export function perSourceFamily(c: Application[]) {
   for (const x of c) {
     const e = m.get(x.sourceFamily) ?? { n: 0, interviews: 0 };
     e.n++;
-    if (x.interviewObtained || x.status === "interview") e.interviews++;
+    if (x.interviewObtained || x.status === "interview" || x.status === "offer") e.interviews++;
     m.set(x.sourceFamily, e);
   }
   return [...m.entries()].map(([name, v]) => ({ name, ...v })).sort((a, b) => b.n - a.n);
@@ -213,7 +219,7 @@ export function funnel(c: Application[]): FunnelNode {
 
   type Outcome = "interview" | "no_answer" | "closed" | "rejected_on_paper";
   const outcome = (x: Application): Outcome =>
-    x.interviewObtained || x.status === "interview"
+    x.interviewObtained || x.status === "interview" || x.status === "offer"
       ? "interview"
       : x.status === "applied"
         ? "no_answer"
@@ -256,6 +262,13 @@ export function funnel(c: Application[]): FunnelNode {
             n: interviews.length,
             children: [
               leaf(
+                "offer",
+                "Got an offer",
+                "A written offer received",
+                "var(--st-good)",
+                interviews.filter((x) => x.status === "offer"),
+              ),
+              leaf(
                 "ongoing",
                 "Process ongoing",
                 "Interview ahead or next stage engaged",
@@ -267,7 +280,7 @@ export function funnel(c: Application[]): FunnelNode {
                 "Rejected after interview",
                 "The process stopped after at least one conversation",
                 "var(--st-critical)",
-                interviews.filter((x) => x.status !== "interview"),
+                interviews.filter((x) => x.status !== "interview" && x.status !== "offer"),
               ),
             ],
           },

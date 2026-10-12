@@ -32,6 +32,7 @@ date_applied,company,role,source,link,remote,salary_shown,cv_version,status,note
 | `applied` | the application went out | **only when a mail proves it** (nominative acknowledgment), or LinkedIn's own notification for Easy Apply |
 | `to_finish` | not sent, or not provably sent | a « complete / verify your email » mail, a form left for a human click, a send whose outcome is unknown |
 | `interview` | a process is engaged | a slot is proposed or confirmed (« thanks for applying » is not enough) |
+| `offer` | a written offer arrived | the offer is in writing (letter, ATS offer page, mail). Keep `INTERVIEW OBTAINED` in the note |
 | `rejected` | end of process | an explicit rejection (the verdict is in the body, not the subject) |
 | `closed` | the posting closed before or after applying | the ATS says so |
 | `withdrawn` | the candidate withdrew | decided by the candidate |
